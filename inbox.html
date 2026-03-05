@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postfach — MZ.DEV</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --yellow: #f5e642; --black: #000000; --white: #ffffff; --gray-dark: #111111; --gray: #1a1a1a; --gray-mid: #2a2a2a; --gray-light: #888888; --red: #ff5f57; --green: #28ca42; --blue: #3b82f6; --font: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--black); color: var(--white); font-family: var(--font); line-height: 1.6; min-height: 100vh; }
+        a { color: var(--yellow); text-decoration: none; } a:hover { text-decoration: underline; }
+        .site-header { background: var(--gray-dark); border-bottom: 1px solid var(--gray-mid); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 1.4rem; font-weight: 700; color: var(--yellow); letter-spacing: 2px; }
+        .header-nav { display: flex; gap: 1.5rem; align-items: center; }
+        .header-nav a { color: var(--gray-light); font-size: 0.9rem; transition: color 0.2s; } .header-nav a:hover, .header-nav a.active { color: var(--yellow); text-decoration: none; }
+        .header-actions { display: flex; gap: 0.75rem; align-items: center; }
+        .header-btn { background: var(--gray-mid); border: 1px solid var(--gray-mid); color: var(--white); padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; position: relative; transition: all 0.2s; } .header-btn:hover { border-color: var(--yellow); }
+        .notif-badge, .inbox-badge { position: absolute; top: -5px; right: -5px; background: var(--red); color: white; font-size: 0.65rem; min-width: 16px; height: 16px; border-radius: 8px; display: none; align-items: center; justify-content: center; font-weight: 700; }
+        .admin-indicator { display: none; background: var(--yellow); color: var(--black); text-align: center; padding: 0.25rem; font-size: 0.75rem; font-weight: 600; }
+        body.admin-mode .admin-indicator { display: block; }
+        .main-content { max-width: 800px; margin: 0 auto; padding: 2rem; }
+        .page-title { font-size: 1.8rem; color: var(--yellow); margin-bottom: 0.5rem; }
+        .page-subtitle { color: var(--gray-light); font-size: 0.9rem; margin-bottom: 1.5rem; }
+        .inbox-actions { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .inbox-filter { background: var(--gray); border: 1px solid var(--gray-mid); color: var(--white); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
+        .inbox-filter:hover, .inbox-filter.active { border-color: var(--yellow); color: var(--yellow); }
+        .inbox-clear { background: none; border: 1px solid var(--gray-mid); color: var(--gray-light); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-left: auto; } .inbox-clear:hover { border-color: var(--red); color: var(--red); }
+        .notif-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .notif-item { display: flex; gap: 1rem; padding: 1rem; background: var(--gray); border: 1px solid var(--gray-mid); border-radius: 8px; transition: all 0.2s; cursor: pointer; align-items: flex-start; }
+        .notif-item:hover { border-color: var(--yellow); }
+        .notif-item.unread { border-left: 3px solid var(--yellow); background: rgba(245,230,66,0.03); }
+        .notif-icon { font-size: 1.5rem; flex-shrink: 0; width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center; background: var(--gray-mid); border-radius: 8px; }
+        .notif-body { flex: 1; min-width: 0; }
+        .notif-msg { font-size: 0.9rem; color: var(--white); line-height: 1.4; }
+        .notif-msg strong { color: var(--yellow); }
+        .notif-time { font-size: 0.75rem; color: var(--gray-light); margin-top: 0.25rem; }
+        .notif-type { font-size: 0.7rem; color: var(--gray-light); background: var(--gray-mid); padding: 0.1rem 0.4rem; border-radius: 3px; text-transform: uppercase; }
+        .notif-delete { background: none; border: none; color: var(--gray-light); cursor: pointer; font-size: 1.1rem; padding: 0 0.25rem; flex-shrink: 0; } .notif-delete:hover { color: var(--red); }
+        .empty-state { text-align: center; padding: 4rem 1rem; color: var(--gray-light); }
+        .empty-state .icon { font-size: 3.5rem; margin-bottom: 1rem; }
+        .load-more { display: block; width: 100%; padding: 0.75rem; background: var(--gray); border: 1px solid var(--gray-mid); color: var(--gray-light); border-radius: 8px; cursor: pointer; font-size: 0.9rem; margin-top: 1rem; transition: all 0.2s; text-align: center; } .load-more:hover { border-color: var(--yellow); color: var(--yellow); }
+        .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--gray-dark); color: var(--white); padding: 0.75rem 1.5rem; border-radius: 8px; border: 1px solid var(--gray-mid); font-size: 0.9rem; z-index: 9999; transition: transform 0.3s ease; pointer-events: none; }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.success { border-color: var(--green); } .toast.error { border-color: var(--red); }
+        @media (max-width: 768px) {
+            .site-header { padding: 0.75rem 1rem; flex-wrap: wrap; gap: 0.5rem; }
+            .main-content { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-indicator">ADMIN-MODUS AKTIV</div>
+    <header class="site-header">
+        <a href="index.html" class="logo">MZ.DEV</a>
+        <nav class="header-nav">
+            <a href="index.html">Home</a>
+            <a href="articles.html">Artikel</a>
+            <a href="projects.html">Projekte</a>
+            <a href="skills.html">Skills</a>
+            <a href="search.html">Suche</a>
+        </nav>
+        <div class="header-actions">
+            <a href="inbox.html" class="header-btn active" title="Postfach" style="border-color:var(--yellow);color:var(--yellow);">&#128232;<span class="inbox-badge"></span></a>
+            <a href="settings.html" class="header-btn" title="Einstellungen">&#9881;</a>
+            <button class="header-btn" id="notifBtn" title="Benachrichtigungen">&#128276;<span class="notif-badge"></span></button>
+            <a href="profile.html" class="header-btn" title="Profil">&#128100;</a>
+        </div>
+    </header>
+    <main class="main-content">
+        <h1 class="page-title">&#128232; Postfach</h1>
+        <p class="page-subtitle">Alle deine Benachrichtigungen an einem Ort</p>
+        <div class="inbox-actions">
+            <button class="inbox-filter active" data-filter="all">Alle</button>
+            <button class="inbox-filter" data-filter="unread">Ungelesen</button>
+            <button class="inbox-filter" data-filter="comment">Kommentare</button>
+            <button class="inbox-filter" data-filter="reaction">Reaktionen</button>
+            <button class="inbox-filter" data-filter="admin">Admin</button>
+            <button class="inbox-filter" data-filter="system">System</button>
+            <button class="inbox-clear" onclick="markAllRead()">Alle gelesen</button>
+            <button class="inbox-clear" onclick="clearAll()" style="margin-left:0;">Alle loeschen</button>
+        </div>
+        <div class="notif-list" id="notifList">
+            <div class="empty-state">
+                <div class="icon">&#128232;</div>
+                <p>Laden...</p>
+            </div>
+        </div>
+        <button class="load-more" id="loadMoreBtn" style="display:none;" onclick="loadMore()">Mehr laden</button>
+    </main>
+    <script src="../shared.js"></script>
+    <script src="../api.js"></script>
+    <script>
+    let currentPage = 1;
+    let currentFilter = 'all';
+    let allNotifications = [];
+    // Filter buttons
+    document.querySelectorAll('.inbox-filter').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.inbox-filter').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.dataset.filter;
+            currentPage = 1;
+            allNotifications = [];
+            loadNotifications();
+        });
+    });
+    async function loadNotifications() {
+        try {
+            const unreadOnly = currentFilter === 'unread';
+            const data = await API.getNotifications(currentPage, unreadOnly);
+            if (!data) return;
+            const notifs = data.notifications || data || [];
+            if (currentPage === 1) allNotifications = [];
+            allNotifications = allNotifications.concat(notifs);
+            // Apply type filter
+            let filtered = allNotifications;
+            if (currentFilter !== 'all' && currentFilter !== 'unread') {
+                filtered = allNotifications.filter(n => n.type === currentFilter);
+            }
+            renderNotifications(filtered);
+            // Show/hide load more
+            const btn = document.getElementById('loadMoreBtn');
+            if (notifs.length >= 20) { btn.style.display = 'block'; } else { btn.style.display = 'none'; }
+        } catch (e) {
+            document.getElementById('notifList').innerHTML = '<div class="empty-state"><div class="icon">&#128232;</div><p>Fehler beim Laden: ' + e.message + '</p></div>';
+        }
+    }
+    function renderNotifications(notifs) {
+        const list = document.getElementById('notifList');
+        if (!notifs.length) {
+            list.innerHTML = '<div class="empty-state"><div class="icon">&#128232;</div><p>Keine Benachrichtigungen</p></div>';
+            return;
+        }
+        list.innerHTML = notifs.map(n => {
+            const icon = getNotifIcon(n.type);
+            const unread = !n.is_read ? ' unread' : '';
+            const time = MZDEV.formatDateTime(n.created_at);
+            return '<div class="notif-item' + unread + '" onclick="markRead(' + n.id + ', this)">' +
+                '<div class="notif-icon">' + icon + '</div>' +
+                '<div class="notif-body">' +
+                    '<div class="notif-msg">' + (n.message || 'Benachrichtigung') + '</div>' +
+                    '<div class="notif-time">' + time + ' &middot; <span class="notif-type">' + n.type + '</span></div>' +
+                '</div>' +
+                '<button class="notif-delete" onclick="event.stopPropagation();deleteNotif(' + n.id + ',this.closest(\'.notif-item\'))">&times;</button>' +
+            '</div>';
+        }).join('');
+    }
+    function getNotifIcon(type) {
+        switch(type) {
+            case 'comment': return '&#128172;';
+            case 'reaction': case 'like': case 'dislike': return '&#128077;';
+            case 'admin': return '&#128274;';
+            case 'friend_request': return '&#129309;';
+            case 'system': return '&#9881;';
+            case 'message': return '&#128232;';
+            default: return '&#128276;';
+        }
+    }
+    async function markRead(id, el) {
+        try {
+            await API.markNotifRead(id);
+            if (el) el.classList.remove('unread');
+            loadNotifCount();
+        } catch(e) {}
+    }
+    async function markAllRead() {
+        try {
+            await API.markAllNotifsRead();
+            MZDEV.showToast('Alle als gelesen markiert', 'success');
+            document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+            loadNotifCount();
+        } catch(e) { MZDEV.showToast('Fehler: ' + e.message, 'error'); }
+    }
+    async function clearAll() {
+        if (!confirm('Alle Benachrichtigungen loeschen?')) return;
+        try {
+            await API.clearAllNotifs();
+            MZDEV.showToast('Alle Benachrichtigungen geloescht', 'success');
+            allNotifications = [];
+            renderNotifications([]);
+            loadNotifCount();
+        } catch(e) { MZDEV.showToast('Fehler: ' + e.message, 'error'); }
+    }
+    async function deleteNotif(id, el) {
+        try {
+            await API.deleteNotification(id);
+            if (el) el.remove();
+            allNotifications = allNotifications.filter(n => n.id !== id);
+            if (!allNotifications.length) renderNotifications([]);
+            loadNotifCount();
+        } catch(e) { MZDEV.showToast('Fehler: ' + e.message, 'error'); }
+    }
+    function loadMore() {
+        currentPage++;
+        loadNotifications();
+    }
+    async function loadNotifCount() {
+        try {
+            const data = await API.getNotifCount();
+            if (data && data.unread !== undefined) {
+                MZDEV.updateNotificationBadge(data.unread);
+                MZDEV.updateInboxBadge(data.unread);
+            }
+        } catch(e) {}
+    }
+    function updateUI() {
+        if (MZDEV.isAdmin) MZDEV.activateAdminMode();
+        loadNotifications();
+        loadNotifCount();
+    }
+    </script>
+</body>
+</html>

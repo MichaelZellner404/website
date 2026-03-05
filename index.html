@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <title>Michael Zellner | Dev Blog</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --black: #000000;
+            --white: #ffffff;
+            --yellow: #f5e642;
+            --gray-dark: #111111;
+            --gray-mid: #222222;
+            --gray-light: #333333;
+            --gray-muted: #888888;
+            --border: rgba(255,255,255,0.1);
+            --red: #ff5f57;
+            --green: #28ca42;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'IBM Plex Sans', sans-serif; background: var(--black); color: var(--white); overflow-x: hidden; line-height: 1.6; cursor: none; }
+        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 9998; opacity: 0.5; }
+        /* ── CURSOR ── */
+        .cursor { position: fixed; width: 12px; height: 12px; background: var(--yellow); border-radius: 50%; pointer-events: none; z-index: 99999; transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s; mix-blend-mode: difference; }
+        .cursor.hover { width: 40px; height: 40px; }
+        /* ── TOAST ── */
+        .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--gray-dark); border: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--white); padding: 0.8rem 1.5rem; z-index: 99998; opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.success { border-color: var(--green); color: var(--green); }
+        .toast.error { border-color: var(--red); color: var(--red); }
+        /* ── HEADER ── */
+        header { position: sticky; top: 0; z-index: 1000; background: var(--black); border-bottom: 1px solid var(--border); padding: 0 5%; display: flex; align-items: center; height: 64px; gap: 0; }
+        .logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.1em; color: var(--white); text-decoration: none; flex-shrink: 0; }
+        .logo span { color: var(--yellow); }
+        .header-rule { flex: 1; height: 1px; background: var(--border); margin: 0 2rem; }
+        nav { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+        nav a { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--gray-muted); text-decoration: none; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.2s; white-space: nowrap; }
+        nav a:hover { color: var(--yellow); }
+        nav a.nav-cta { background: var(--yellow); color: var(--black); padding: 0.4rem 0.9rem; font-weight: 700; transition: background 0.2s; }
+        nav a.nav-cta:hover { background: var(--white); color: var(--black); }
+        /* ── ICON BUTTONS ── */
+        .header-actions { display: flex; align-items: center; gap: 0.4rem; margin-left: 0.8rem; flex-shrink: 0; }
+        .icon-btn { width: 36px; height: 36px; background: transparent; border: 1px solid var(--border); color: var(--gray-muted); display: flex; align-items: center; justify-content: center; cursor: none; transition: all 0.2s; position: relative; flex-shrink: 0; padding: 0; }
+        .icon-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+        .icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .online-dot { position: absolute; bottom: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--green); border: 1px solid var(--black); display: none; }
+        .online-dot.visible { display: block; }
+        /* ── PROFILE DROPDOWN ── */
+        .profile-wrap { position: relative; }
+        .profile-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--gray-dark); border: 1px solid var(--border); min-width: 220px; z-index: 2000; display: none; box-shadow: 0 8px 32px rgba(0,0,0,0.8); }
+        .profile-dropdown.open { display: block; }
+        .pd-user { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.8rem; align-items: center; }
+        .pd-avatar { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); object-fit: cover; background: var(--gray-mid); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .pd-avatar svg { width: 18px; height: 18px; fill: none; stroke: var(--gray-muted); stroke-width: 1.8; }
+        .pd-info { flex: 1; min-width: 0; }
+        .pd-username { font-family: 'Bebas Neue', sans-serif; font-size: 1.05rem; color: var(--white); letter-spacing: 0.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .pd-role { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--yellow); letter-spacing: 0.1em; }
+        .pd-verified { display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0.5rem 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .verified-badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; background: rgba(40,202,66,0.15); border: 1px solid rgba(40,202,66,0.3); color: var(--green); padding: 0.15rem 0.45rem; letter-spacing: 0.08em; }
+        .pd-item { padding: 0.75rem 1.2rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--gray-muted); cursor: none; transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; display: flex; align-items: center; gap: 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.04); text-decoration: none; }
+        .pd-item:hover { color: var(--white); background: rgba(255,255,255,0.04); }
+        .pd-item.danger:hover { color: var(--red); }
+        .pd-item svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+        /* ── SUB-NAV (index page sections) ── */
+        .sub-nav { display: flex; justify-content: center; gap: 2rem; padding: 0.5rem 5%; background: var(--gray-dark); border-bottom: 1px solid var(--border); }
+        .sub-nav a { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--gray-muted); text-decoration: none; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.2s; }
+        .sub-nav a:hover { color: var(--yellow); }
+        /* ── ADMIN INDICATOR ── */
+        .admin-indicator { display: none; background: var(--yellow); color: var(--black); text-align: center; padding: 0.35rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.15em; position: sticky; top: 64px; z-index: 999; }
+        body.admin-mode .admin-indicator { display: block; }
+        /* ── ADMIN FLOATING TOOLBAR ── */
+        .admin-toolbar { display: none; position: fixed; bottom: 2rem; right: 2rem; background: var(--yellow); color: var(--black); padding: 0.7rem 1.2rem; z-index: 5000; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; gap: 0.8rem; align-items: center; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); flex-wrap: wrap; max-width: 360px; }
+        body.admin-mode .admin-toolbar { display: flex; }
+        .admin-tool-btn { background: var(--black); color: var(--yellow); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; font-weight: 700; padding: 0.3rem 0.7rem; cursor: pointer; letter-spacing: 0.05em; white-space: nowrap; }
+        .admin-tool-btn:hover { background: var(--gray-dark); }
+        /* ── AUTH MODAL ── */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+        .modal-overlay.open { display: flex; }
+        .modal { background: var(--gray-dark); border: 1px solid var(--border); width: 100%; max-width: 440px; padding: 2.5rem; position: relative; max-height: 90vh; overflow-y: auto; }
+        .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--gray-muted); font-size: 1.2rem; cursor: none; font-family: 'IBM Plex Mono', monospace; transition: color 0.2s; line-height: 1; }
+        .modal-close:hover { color: var(--white); }
+        .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+        .modal-sub { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--gray-muted); letter-spacing: 0.1em; margin-bottom: 2rem; }
+        .modal-tabs { display: flex; gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 2rem; flex-wrap: wrap; }
+        .modal-tab { flex: 1; padding: 0.6rem; background: var(--black); font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-muted); border: none; cursor: none; transition: all 0.2s; text-align: center; min-width: 70px; }
+        .modal-tab.active { background: var(--yellow); color: var(--black); font-weight: 700; }
+        .modal-form { display: none; }
+        .modal-form.active { display: block; }
+        .m-group { margin-bottom: 1.2rem; }
+        .m-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.63rem; color: var(--gray-muted); letter-spacing: 0.2em; text-transform: uppercase; display: block; margin-bottom: 0.4rem; }
+        .m-input { width: 100%; background: var(--black); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; padding: 0.75rem 1rem; outline: none; transition: border-color 0.2s; caret-color: var(--yellow); }
+        .m-input:focus { border-color: var(--yellow); }
+        .m-input:-webkit-autofill { -webkit-text-fill-color: var(--white); -webkit-box-shadow: 0 0 0 1000px var(--black) inset; }
+        .m-btn { width: 100%; background: var(--yellow); color: var(--black); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.9rem; cursor: none; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 0.8rem; }
+        .m-btn:hover { background: var(--white); }
+        .m-btn.secondary { background: var(--gray-mid); color: var(--white); border: 1px solid var(--border); }
+        .m-btn.secondary:hover { background: var(--gray-light); }
+        .m-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .m-error { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--red); margin-top: 0.6rem; text-align: center; }
+        .m-success { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--green); margin-top: 0.6rem; text-align: center; }
+        .m-divider { display: flex; align-items: center; gap: 1rem; margin: 1.2rem 0; }
+        .m-divider::before, .m-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+        .m-divider span { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--gray-muted); }
+        .oauth-notice { background: rgba(245,230,66,0.06); border: 1px solid rgba(245,230,66,0.2); padding: 0.8rem 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--gray-muted); line-height: 1.6; margin-bottom: 1.2rem; }
+        .oauth-notice strong { color: var(--yellow); }
+        /* ── HERO ── */
+        .hero { min-height: 92vh; padding: 8rem 5% 6rem; display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; position: relative; border-bottom: 1px solid var(--border); overflow: hidden; }
+        .hero-bg-text { position: absolute; bottom: -2rem; right: -1rem; font-family: 'Bebas Neue', sans-serif; font-size: 20vw; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.04); pointer-events: none; line-height: 1; user-select: none; }
+        .hero-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--yellow); letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.8rem; }
+        .hero-label::before { content: ''; display: inline-block; width: 2rem; height: 1px; background: var(--yellow); }
+        .hero h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(4rem, 8vw, 8rem); line-height: 0.9; letter-spacing: -0.01em; margin-bottom: 2rem; }
+        .hero h1 .line-1 { color: var(--white); display: block; }
+        .hero h1 .line-2 { color: transparent; -webkit-text-stroke: 2px var(--white); display: block; }
+        .hero h1 .line-3 { color: var(--yellow); display: block; }
+        .hero-desc { font-size: 1rem; color: var(--gray-muted); max-width: 380px; line-height: 1.8; margin-bottom: 3rem; }
+        .hero-buttons { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .btn { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.9rem 2rem; text-decoration: none; display: inline-block; transition: all 0.2s; border: none; cursor: none; }
+        .btn-primary { background: var(--yellow); color: var(--black); font-weight: 700; }
+        .btn-primary:hover { background: var(--white); }
+        .btn-ghost { background: transparent; color: var(--white); border: 1px solid rgba(255,255,255,0.2); }
+        .btn-ghost:hover { border-color: var(--white); background: rgba(255,255,255,0.05); }
+        .hero-right { display: flex; flex-direction: column; gap: 2rem; }
+        .hero-img-wrap { position: relative; overflow: hidden; border: 1px solid var(--border); }
+        .hero-img-wrap img { width: 100%; height: 320px; object-fit: cover; display: block; filter: grayscale(30%) contrast(1.1); transition: filter 0.4s; }
+        .hero-img-wrap:hover img { filter: grayscale(0%) contrast(1.1); }
+        .hero-img-placeholder { width: 100%; height: 320px; background: var(--gray-dark); display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid var(--border); gap: 1rem; }
+        .hero-img-placeholder svg { width: 48px; height: 48px; opacity: 0.2; fill: none; stroke: var(--gray-muted); stroke-width: 1.5; }
+        .hero-img-placeholder span { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--gray-muted); letter-spacing: 0.1em; }
+        .terminal { background: var(--gray-dark); border: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; overflow: hidden; }
+        .terminal-bar { background: var(--gray-mid); padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border); }
+        .terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .terminal-dot.red { background: var(--red); }
+        .terminal-dot.yellow { background: var(--yellow); }
+        .terminal-dot.green { background: var(--green); }
+        .terminal-title { font-size: 0.7rem; color: var(--gray-muted); margin-left: auto; letter-spacing: 0.05em; }
+        .terminal-body { padding: 1.5rem; line-height: 2; }
+        .terminal-body .prompt { color: var(--yellow); }
+        .terminal-body .out { color: var(--gray-muted); }
+        .terminal-body .val { color: var(--yellow); }
+        .cursor-blink { display: inline-block; width: 8px; height: 1em; background: var(--yellow); vertical-align: middle; animation: blink 0.9s infinite; }
+        @keyframes blink { 0%,49%{opacity:1}50%,100%{opacity:0} }
+        .hero-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+        .stat { background: var(--black); padding: 1.5rem; text-align: center; }
+        .stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--yellow); line-height: 1; display: block; }
+        .stat-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--gray-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.3rem; }
+        /* ── TICKER ── */
+        .ticker { background: var(--yellow); color: var(--black); padding: 0.7rem 0; overflow: hidden; white-space: nowrap; }
+        .ticker-inner { display: inline-block; animation: ticker 30s linear infinite; }
+        .ticker span { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin: 0 3rem; }
+        .ticker span::before { content: '★ '; }
+        @keyframes ticker { 0%{transform:translateX(0)}100%{transform:translateX(-50%)} }
+        /* ── SECTIONS ── */
+        section { padding: 6rem 5%; border-bottom: 1px solid var(--border); }
+        .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4rem; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; }
+        .section-tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--yellow); letter-spacing: 0.3em; text-transform: uppercase; }
+        .section-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem,5vw,4rem); line-height: 1; letter-spacing: 0.02em; }
+        .section-meta { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--gray-muted); }
+        /* ── BLOG ── */
+        .featured-post { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); margin-bottom: 3rem; overflow: hidden; transition: border-color 0.3s; }
+        .featured-post:hover { border-color: var(--yellow); }
+        .featured-post-visual { background: var(--gray-dark); display: flex; align-items: center; justify-content: center; min-height: 400px; position: relative; overflow: hidden; }
+        .featured-post-visual::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg,transparent,transparent 10px,rgba(255,255,255,0.02) 10px,rgba(255,255,255,0.02) 11px); }
+        .featured-visual-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        .featured-visual-inner svg { width: 80px; height: 80px; opacity: 0.15; fill: none; stroke: var(--yellow); stroke-width: 1; }
+        .featured-visual-label { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: rgba(255,255,255,0.05); letter-spacing: 0.1em; }
+        .featured-badge { position: absolute; top: 1.5rem; left: 1.5rem; background: var(--yellow); color: var(--black); font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.3rem 0.7rem; }
+        .featured-post-content { padding: 3rem; display: flex; flex-direction: column; justify-content: space-between; border-left: 1px solid var(--border); }
+        .post-category { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--yellow); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1rem; }
+        .post-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; line-height: 1.05; letter-spacing: 0.02em; margin-bottom: 1rem; color: var(--white); }
+        .post-excerpt { color: var(--gray-muted); font-size: 0.95rem; line-height: 1.8; flex: 1; margin-bottom: 2rem; }
+        .post-footer { display: flex; align-items: center; justify-content: space-between; }
+        .post-meta { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--gray-muted); }
+        .post-meta strong { color: var(--white); }
+        .read-more { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--black); background: var(--yellow); text-decoration: none; padding: 0.5rem 1.2rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; transition: background 0.2s; }
+        .read-more:hover { background: var(--white); }
+        .blog-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+        .blog-card { background: var(--black); padding: 2rem; display: flex; flex-direction: column; gap: 1rem; transition: background 0.2s; text-decoration: none; color: inherit; position: relative; overflow: hidden; }
+        .blog-card::after { content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background: var(--yellow); transition: width 0.3s ease; }
+        .blog-card:hover::after { width: 100%; }
+        .blog-card:hover { background: var(--gray-dark); }
+        .card-num { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: rgba(255,255,255,0.05); line-height: 1; position: absolute; top: 1rem; right: 1.5rem; }
+        .card-icon { width: 32px; height: 32px; opacity: 0.6; fill: none; stroke: var(--yellow); stroke-width: 1.5; stroke-linecap: round; }
+        .card-category { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--yellow); letter-spacing: 0.2em; text-transform: uppercase; }
+        .card-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; line-height: 1.1; letter-spacing: 0.02em; color: var(--white); }
+        .card-desc { font-size: 0.85rem; color: var(--gray-muted); line-height: 1.7; flex: 1; }
+        .card-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: auto; }
+        .tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.08); padding: 0.2rem 0.5rem; }
+        .card-date { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: rgba(255,255,255,0.25); }
+        /* ── SKILLS ── */
+        .skills-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 4rem; align-items: start; }
+        .skills-intro p { color: var(--gray-muted); font-size: 0.95rem; line-height: 1.8; margin-bottom: 1.5rem; }
+        .skill-stack { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+        .skill-row { display: grid; grid-template-columns: 160px 1fr auto; align-items: center; gap: 2rem; background: var(--black); padding: 1.2rem 1.5rem; transition: background 0.2s; }
+        .skill-row:hover { background: var(--gray-dark); }
+        .skill-name { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--white); display: flex; align-items: center; gap: 0.7rem; }
+        .skill-name svg { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: var(--gray-muted); stroke-width: 1.8; stroke-linecap: round; }
+        .skill-bar-wrap { height: 2px; background: rgba(255,255,255,0.07); position: relative; overflow: hidden; }
+        .skill-bar-fill { height: 100%; background: var(--yellow); transform-origin: left; transform: scaleX(0); transition: transform 1.2s cubic-bezier(0.22,1,0.36,1); }
+        .skill-bar-fill.animated { transform: scaleX(1); }
+        .skill-pct { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--gray-muted); text-align: right; min-width: 2.5rem; }
+        /* ── ABOUT ── */
+        .about-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; }
+        .about-headline { font-family: 'Bebas Neue', sans-serif; font-size: clamp(3rem,5vw,5rem); line-height: 1; margin-bottom: 2rem; }
+        .about-headline em { font-style: normal; color: var(--yellow); }
+        .about-text { color: var(--gray-muted); font-size: 1rem; line-height: 1.9; margin-bottom: 1.5rem; }
+        .about-code { background: var(--gray-dark); border: 1px solid var(--border); border-left: 3px solid var(--yellow); padding: 2rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; line-height: 2; }
+        .code-comment { color: rgba(255,255,255,0.25); }
+        .code-key { color: rgba(255,255,255,0.6); }
+        .code-string { color: var(--yellow); }
+        .code-bracket { color: rgba(255,255,255,0.3); }
+        /* ── ANNOUNCEMENTS (Blackboard) ── */
+        .announcement-board { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+        .announcement-item { background: var(--black); padding: 1.5rem 2rem; display: flex; gap: 1.5rem; align-items: flex-start; transition: background 0.2s; }
+        .announcement-item:hover { background: var(--gray-dark); }
+        .ann-icon { width: 36px; height: 36px; background: rgba(245,230,66,0.1); border: 1px solid rgba(245,230,66,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ann-icon svg { width: 16px; height: 16px; fill: none; stroke: var(--yellow); stroke-width: 1.8; stroke-linecap: round; }
+        .ann-content { flex: 1; }
+        .ann-type { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--yellow); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 0.3rem; }
+        .ann-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; color: var(--white); letter-spacing: 0.02em; margin-bottom: 0.4rem; }
+        .ann-text { font-size: 0.88rem; color: var(--gray-muted); line-height: 1.6; }
+        .ann-date { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.2); margin-top: 0.5rem; }
+        .ann-admin-actions { display: none; gap: 0.5rem; }
+        body.admin-mode .ann-admin-actions { display: flex; }
+        .ann-action-btn { background: none; border: 1px solid var(--border); color: var(--gray-muted); font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; padding: 0.25rem 0.6rem; cursor: pointer; transition: all 0.2s; }
+        .ann-action-btn:hover { color: var(--red); border-color: var(--red); }
+        /* ── CONTACT ── */
+        .contact-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; }
+        .contact-big { font-family: 'Bebas Neue', sans-serif; font-size: clamp(3rem,6vw,6rem); line-height: 1; margin-bottom: 2rem; }
+        .contact-big em { font-style: normal; color: var(--yellow); }
+        .contact-sub { color: var(--gray-muted); font-size: 1rem; line-height: 1.8; margin-bottom: 3rem; }
+        .contact-links { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+        .contact-link { background: var(--black); padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: var(--white); transition: all 0.2s; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; }
+        .contact-link:hover { background: var(--yellow); color: var(--black); }
+        .contact-link .arrow { font-size: 1.2rem; transition: transform 0.2s; }
+        .contact-link:hover .arrow { transform: translateX(5px); }
+        .contact-form-area { background: var(--gray-dark); border: 1px solid var(--border); padding: 2.5rem; }
+        .form-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; margin-bottom: 2rem; letter-spacing: 0.05em; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--gray-muted); letter-spacing: 0.2em; text-transform: uppercase; display: block; margin-bottom: 0.5rem; }
+        .form-input { width: 100%; background: var(--black); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; padding: 0.9rem 1rem; outline: none; transition: border-color 0.2s; caret-color: var(--yellow); }
+        .form-input:focus { border-color: var(--yellow); }
+        .form-input:-webkit-autofill { -webkit-text-fill-color: var(--white); -webkit-box-shadow: 0 0 0 1000px var(--black) inset; }
+        textarea.form-input { resize: vertical; min-height: 120px; }
+        .form-submit { background: var(--yellow); color: var(--black); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 1rem 2rem; cursor: none; transition: background 0.2s; width: 100%; }
+        .form-submit:hover { background: var(--white); }
+        /* ── CHAT ── */
+        .chat-panel { position: fixed; bottom: 0; right: 2rem; width: 340px; z-index: 5000; background: var(--gray-dark); border: 1px solid var(--border); border-bottom: none; transform: translateY(calc(100% - 48px)); transition: transform 0.3s cubic-bezier(0.22,1,0.36,1); }
+        .chat-panel.open { transform: translateY(0); }
+        .chat-header { height: 48px; display: flex; align-items: center; padding: 0 1rem; gap: 0.8rem; cursor: none; border-bottom: 1px solid var(--border); background: var(--gray-mid); }
+        .chat-header-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--white); letter-spacing: 0.05em; flex: 1; }
+        .chat-body { height: 300px; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+        .chat-msg { padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.5; max-width: 85%; }
+        .chat-msg.me { background: var(--yellow); color: var(--black); align-self: flex-end; }
+        .chat-msg.them { background: rgba(255,255,255,0.06); color: var(--white); align-self: flex-start; border: 1px solid var(--border); }
+        .chat-msg-meta { font-size: 0.6rem; opacity: 0.5; margin-top: 0.2rem; }
+        .chat-footer { padding: 0.8rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
+        .chat-input { flex: 1; background: var(--black); border: 1px solid var(--border); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; padding: 0.5rem 0.7rem; outline: none; caret-color: var(--yellow); }
+        .chat-input:focus { border-color: var(--yellow); }
+        .chat-send { background: var(--yellow); color: var(--black); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; font-weight: 700; padding: 0.5rem 0.8rem; cursor: none; }
+        /* ── FOOTER ── */
+        footer { background: var(--gray-dark); border-top: 1px solid var(--border); padding: 3rem 5%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 2rem; }
+        .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--white); }
+        .footer-logo span { color: var(--yellow); }
+        .footer-copy { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--gray-muted); text-align: center; letter-spacing: 0.05em; }
+        .footer-links { display: flex; gap: 1.5rem; justify-content: flex-end; flex-wrap: wrap; }
+        .footer-links a { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--gray-muted); text-decoration: none; letter-spacing: 0.05em; text-transform: uppercase; transition: color 0.2s; }
+        .footer-links a:hover { color: var(--yellow); }
+        /* ── REVEAL ── */
+        .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+        /* ── NEW ARTICLE FORM (admin) ── */
+        .new-article-form { display: none; background: rgba(245,230,66,0.04); border: 1px dashed rgba(245,230,66,0.3); padding: 2rem; margin-bottom: 2rem; }
+        body.admin-mode .new-article-form { display: block; }
+        .new-article-form .form-title { color: var(--yellow); font-size: 1.1rem; }
+        /* ── ADMIN IMAGE UPLOAD ── */
+        .img-upload-area { border: 1px dashed rgba(245,230,66,0.4); padding: 1.5rem; text-align: center; cursor: pointer; transition: background 0.2s; display: none; }
+        body.admin-mode .img-upload-area { display: block; }
+        .img-upload-area:hover { background: rgba(245,230,66,0.04); }
+        .img-upload-area p { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--gray-muted); }
+        /* ── RESPONSIVE ── */
+        @media (max-width: 1024px) {
+            .hero { grid-template-columns: 1fr; min-height: auto; padding: 4rem 5%; }
+            .hero-right { display: none; }
+            .skills-layout, .about-layout, .contact-layout { grid-template-columns: 1fr; }
+            .blog-grid { grid-template-columns: 1fr 1fr; }
+            footer { grid-template-columns: 1fr; text-align: center; }
+            .footer-links { justify-content: center; }
+        }
+        @media (max-width: 768px) {
+            header { padding: 0 5%; flex-wrap: nowrap; }
+            .header-rule { display: none; }
+            nav a:not(.nav-cta):not(.header-actions *) { display: none; }
+            .hero h1 { font-size: 3.5rem; }
+            .featured-post { grid-template-columns: 1fr; }
+            .featured-post-visual { min-height: 200px; }
+            .featured-post-content { border-left: none; border-top: 1px solid var(--border); }
+            .blog-grid { grid-template-columns: 1fr; }
+            .skill-row { grid-template-columns: 110px 1fr auto; gap: 1rem; }
+            body { cursor: auto; }
+            .cursor { display: none; }
+            .chat-panel { width: 100%; right: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+    </style>
+</head>
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="toast" id="mzdev-toast"></div>
+<!-- ADMIN INDICATOR -->
+<div class="admin-indicator">// ADMIN-MODUS AKTIV — Du kannst alle Inhalte bearbeiten</div>
+<!-- ═══ AUTH MODAL ═══ -->
+<div class="modal-overlay" id="authModal">
+    <div class="modal">
+        <button class="modal-close" onclick="closeModal('authModal')">&#10005;</button>
+        <div class="modal-title">KONTO</div>
+        <div class="modal-sub">// ANMELDEN ODER REGISTRIEREN</div>
+        <div class="modal-tabs" id="authTabs">
+            <button class="modal-tab active" onclick="switchTab('github')">GitHub</button>
+            <button class="modal-tab" onclick="switchTab('google')">Google</button>
+            <button class="modal-tab" onclick="switchTab('discord')">Discord</button>
+            <button class="modal-tab" onclick="switchTab('twitch')">Twitch</button>
+            <button class="modal-tab" onclick="switchTab('reddit')">Reddit</button>
+            <button class="modal-tab" onclick="switchTab('spotify')">Spotify</button>
+            <button class="modal-tab" onclick="switchTab('admin')">Admin</button>
+        </div>
+        <div class="modal-form active" id="form-github">   
+            <div class="oauth-notice"><strong>GitHub OAuth</strong><br>Melde dich sicher ueber GitHub an. Avatar, Name und Bio werden automatisch geladen.</div>
+        <button class="m-btn" onclick="handleProviderLogin('github')"><svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;vertical-align:middle;margin-right:6px;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg> Mit GitHub anmelden</button>
+        <div class="m-error" id="github-error"></div>
+    </div>
+    <div class="modal-form" id="form-google">
+        <div class="oauth-notice"><strong>Google OAuth</strong><br>Melde dich sicher ueber dein Google-Konto an.</div>
+        <button class="m-btn" onclick="handleProviderLogin('google')" style="background:#4285F4;color:#fff;">Mit Google anmelden</button>
+        <div class="m-error" id="google-error"></div>
+    </div>
+    <div class="modal-form" id="form-discord">
+        <div class="oauth-notice"><strong>Discord OAuth</strong><br>Melde dich sicher ueber dein Discord-Konto an.</div>
+        <button class="m-btn" onclick="handleProviderLogin('discord')" style="background:#5865F2;color:#fff;">Mit Discord anmelden</button>
+        <div class="m-error" id="discord-error"></div>
+    </div>
+    <div class="modal-form" id="form-twitch">
+        <div class="oauth-notice"><strong>Twitch OAuth</strong><br>Melde dich sicher ueber dein Twitch-Konto an.</div>
+        <button class="m-btn" onclick="handleProviderLogin('twitch')" style="background:#9146FF;color:#fff;">Mit Twitch anmelden</button>
+        <div class="m-error" id="twitch-error"></div>
+    </div>
+    <div class="modal-form" id="form-reddit">
+        <div class="oauth-notice"><strong>Reddit OAuth</strong><br>Melde dich sicher ueber dein Reddit-Konto an.</div>
+        <button class="m-btn" onclick="handleProviderLogin('reddit')" style="background:#FF4500;color:#fff;">Mit Reddit anmelden</button>
+        <div class="m-error" id="reddit-error"></div>
+    </div>
+    <div class="modal-form" id="form-spotify">
+        <div class="oauth-notice"><strong>Spotify OAuth</strong><br>Melde dich sicher ueber dein Spotify-Konto an.</div>
+        <button class="m-btn" onclick="handleProviderLogin('spotify')" style="background:#1DB954;color:#fff;">Mit Spotify anmelden</button>
+        <div class="m-error" id="spotify-error"></div>
+    </div>
+    <div class="modal-form" id="form-admin">
+        <div class="m-group"><label class="m-label">Admin-Passwort</label><input type="password" class="m-input" id="admin-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')handleAdmin()"></div>
+        <button class="m-btn" onclick="handleAdmin()">Als Admin einloggen &#8594;</button>
+        <div class="m-error" id="admin-error"></div>
+    </div>
+</div>
+</div>
+<!-- ═══ ANNOUNCEMENT MODAL (Admin) ═══ -->
+<div class="modal-overlay" id="annModal">
+<div class="modal" style="max-width:520px;">
+    <button class="modal-close" onclick="closeModal('annModal')">✕</button>
+    <div class="modal-title">ANKÜNDIGUNG</div>
+    <div class="modal-sub">// NEUEN BEITRAG ERSTELLEN</div>
+    <div class="m-group">
+        <label class="m-label">Typ</label>
+        <select class="m-input" id="ann-type-input" style="cursor:pointer;">
+            <option value="Ankündigung">Ankündigung</option>
+            <option value="Update">Update</option>
+            <option value="Projekt">Projekt</option>
+            <option value="News">News</option>
+        </select>
+    </div>
+    <div class="m-group">
+        <label class="m-label">Titel</label>
+        <input type="text" class="m-input" id="ann-title-input" placeholder="Titel der Ankündigung…">
+    </div>
+    <div class="m-group">
+        <label class="m-label">Text</label>
+        <textarea class="m-input" id="ann-text-input" style="min-height:100px;" placeholder="Beschreibung…"></textarea>
+    </div>
+    <button class="m-btn" onclick="publishAnnouncement()">Veröffentlichen →</button>
+</div>
+</div>
+<!-- ═══ HEADER ═══ -->
+<header>
+<a href="index.html" class="logo">MZ<span>.</span>DEV</a>
+<div class="header-rule"></div>
+<nav>
+    <a href="index.html" style="color:var(--yellow);">Start</a>
+    <a href="articles.html">Artikel</a>
+    <a href="skills.html">Skills</a>
+    <a href="projects.html">Projekte</a>
+    <a href="search.html">Suche</a>
+    <a href="index.html#contact" class="nav-cta">Kontakt</a>
+    <div class="header-actions">
+        <a href="inbox.html" class="icon-btn" title="Postfach" style="font-size:0.9rem;">&#128232;<span class="inbox-badge" style="position:absolute;top:-3px;right:-3px;background:var(--red);color:white;font-size:0.55rem;min-width:14px;height:14px;border-radius:7px;display:none;align-items:center;justify-content:center;font-weight:700;"></span></a>
+        <a href="settings.html" class="icon-btn" title="Einstellungen" style="text-decoration:none;">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </a>
+        <button class="icon-btn" id="chatToggleBtn" onclick="toggleChatPanel()" title="Nachrichten" style="display:none;">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
+        <div class="profile-wrap">
+            <button class="icon-btn" id="accountBtn" onclick="toggleProfileDropdown()" title="Konto">
+                <svg viewBox="0 0 24 24" id="accountIcon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <img id="accountAvatar" src="" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;display:none;">
+                <span class="online-dot" id="online-dot"></span>
+            </button>
+            <div class="profile-dropdown" id="profileDropdown">
+                <div class="pd-user">
+                    <div class="pd-avatar" id="pd-avatar-wrap"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                    <div class="pd-info">
+                        <div class="pd-username" id="pd-username">Gast</div>
+                        <div class="pd-role" id="pd-role">// NICHT ANGEMELDET</div>
+                    </div>
+                </div>
+                <div class="pd-verified" id="pd-verified" style="display:none;"></div>
+                <div id="pd-loggedout">
+                    <button class="pd-item" onclick="openModal('authModal');closeDropdown();">
+                        <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                        Anmelden
+                    </button>
+                </div>
+                <div id="pd-loggedin" style="display:none;">
+                    <a class="pd-item" href="profile.html"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Mein Profil</a>
+                    <a class="pd-item" href="settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg> Einstellungen</a>
+                    <button class="pd-item" id="pd-admin-btn" onclick="toggleAdminModeFromDropdown();closeDropdown();" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Admin-Modus</button>
+                    <button class="pd-item" onclick="openChatPanel();closeDropdown();"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Nachrichten</button>
+                    <button class="pd-item danger" onclick="handleLogout();closeDropdown();"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Abmelden</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+</header>
+<!-- ═══ SUB-NAV (Seitennavigation) ═══ -->
+<div class="sub-nav">
+<a href="#blog">Blog</a>
+<a href="#about">About</a>
+<a href="#contact">Kontakt</a>
+</div>
+<!-- ADMIN TOOLBAR -->
+<div class="admin-toolbar" id="adminToolbar">
+<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+ADMIN
+<button class="admin-tool-btn" onclick="openModal('annModal')">+ Ankündigung</button>
+<button class="admin-tool-btn" onclick="scrollToNewArticle()">+ Artikel</button>
+<button class="admin-tool-btn" onclick="document.getElementById('adminImgUpload').click()">Bild hochladen</button>
+<button class="admin-tool-btn" onclick="saveAllAdminChanges()">✓ Speichern</button>
+<button class="admin-tool-btn" style="background:rgba(255,95,87,0.2);color:var(--red);border:none;" onclick="exitAdminMode()">✕ Beenden</button>
+<input type="file" id="adminImgUpload" style="display:none;" accept="image/*" onchange="handleAdminImageUpload(event)">
+</div>
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+<div class="hero-content">
+    <div class="hero-label reveal">Hobby-Entwickler &amp; Tech-Blogger</div>
+    <h1 class="reveal reveal-delay-1">
+        <span class="line-1">MICHAEL</span>
+        <span class="line-2">ZELLNER</span>
+        <span class="line-3">BLOG.</span>
+    </h1>
+    <p class="hero-desc reveal reveal-delay-2" id="heroDesc">
+        Gedanken zu Code, Webtechnologien und Design.
+        Ich entwickle leidenschaftlich in meiner Freizeit und lerne jeden Tag Neues —
+        vom Frontend-Design bis zu Security-Lösungen.
+    </p>
+    <div class="hero-buttons reveal reveal-delay-3">
+        <a href="articles.html" class="btn btn-primary">Artikel lesen</a>
+        <a href="#contact" class="btn btn-ghost">Zusammenarbeiten</a>
+    </div>
+</div>
+<div class="hero-right">
+    <div class="hero-img-wrap reveal reveal-delay-1" id="heroImgWrap">
+        <img src="1.jpg" alt="Michael Zellner" id="heroImg"
+             onerror="this.parentElement.style.display='none'; document.getElementById('heroImgPlaceholder').style.display='flex';">
+    </div>
+    <div class="hero-img-placeholder" id="heroImgPlaceholder" style="display:none;">
+        <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"/><circle cx="12" cy="9" r="3"/><path d="M6 21v-1a6 6 0 0 1 12 0v1"/></svg>
+        <span>// BILD HIER: 1.jpg</span>
+    </div>
+    <div class="img-upload-area" onclick="document.getElementById('heroImgUploadInput').click()">
+        <p>📷 Admin: Bild hochladen</p>
+        <input type="file" id="heroImgUploadInput" style="display:none;" accept="image/*" onchange="handleHeroImageUpload(event)">
+    </div>
+    <div class="terminal reveal reveal-delay-2">
+        <div class="terminal-bar">
+            <div class="terminal-dot red"></div>
+            <div class="terminal-dot yellow"></div>
+            <div class="terminal-dot green"></div>
+            <div class="terminal-title">michael@dev ~ bash</div>
+        </div>
+        <div class="terminal-body" id="terminalBody">
+            <div><span class="prompt">❯ </span><span>whoami</span></div>
+            <div class="out">michael.zellner</div>
+            <div><span class="prompt">❯ </span><span>cat about.json</span></div>
+            <div class="out">{</div>
+            <div class="out">&nbsp;&nbsp;<span class="val">"role"</span>: "Hobby Dev (Fullstack)",</div>
+            <div class="out">&nbsp;&nbsp;<span class="val">"focus"</span>: "Web &amp; Security &amp; Design",</div>
+            <div class="out">&nbsp;&nbsp;<span class="val">"status"</span>: "always learning"</div>
+            <div class="out">}</div>
+            <div><span class="prompt">❯ </span><span class="cursor-blink"></span></div>
+        </div>
+    </div>
+    <div class="hero-stats reveal reveal-delay-3">
+        <div class="stat"><span class="stat-num">∞</span><div class="stat-label">Neugier</div></div>
+        <div class="stat"><span class="stat-num" id="statProjects">15+</span><div class="stat-label">Projekte</div></div>
+        <div class="stat"><span class="stat-num">10</span><div class="stat-label">Technologien</div></div>
+    </div>
+</div>
+<div class="hero-bg-text">DEV</div>
+</section>
+<!-- TICKER -->
+<div class="ticker"><div class="ticker-inner">
+<span>Web Development</span><span>UI / UX Design</span><span>Security &amp; OWASP</span>
+<span>Webtechnologien</span><span>AI &amp; Machine Learning</span><span>React &amp; Vue.js</span>
+<span>Node.js &amp; Python</span><span>HTML · CSS · JS</span>
+<span>Web Development</span><span>UI / UX Design</span><span>Security &amp; OWASP</span>
+<span>Webtechnologien</span><span>AI &amp; Machine Learning</span><span>React &amp; Vue.js</span>
+<span>Node.js &amp; Python</span><span>HTML · CSS · JS</span>
+</div></div>
+<!-- ═══ BLOG ═══ -->
+<section id="blog">
+<div class="section-header reveal">
+    <div>
+        <div class="section-tag">// 01 — Aktuell</div>
+        <h2 class="section-title">Blog &amp; Artikel</h2>
+    </div>
+    <div class="section-meta" id="blogCount">6 Einträge</div>
+</div>
+<!-- Admin: New Article -->
+<div class="new-article-form" id="newArticleForm">
+    <div class="form-title">// NEUEN ARTIKEL ERSTELLEN</div>
+    <br>
+    <div class="form-group">
+        <label class="form-label">Titel</label>
+        <input type="text" class="form-input" id="newArtTitle" placeholder="Artikel-Titel…">
+    </div>
+    <div class="form-group">
+        <label class="form-label">Kategorie</label>
+        <select class="form-input" id="newArtCat" style="cursor:pointer;">
+            <option>Frontend</option><option>Backend</option><option>Security</option>
+            <option>Design</option><option>AI</option><option>DevOps</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Lesezeit (z.B. "5 min")</label>
+        <input type="text" class="form-input" id="newArtRead" placeholder="5 min">
+    </div>
+    <div class="form-group">
+        <label class="form-label">Tags (kommagetrennt)</label>
+        <input type="text" class="form-input" id="newArtTags" placeholder="React, JavaScript, Tips">
+    </div>
+    <div class="form-group">
+        <label class="form-label">Kurzbeschreibung</label>
+        <textarea class="form-input" id="newArtExcerpt" style="min-height:80px;" placeholder="Kurze Beschreibung…"></textarea>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Inhalt (HTML)</label>
+        <textarea class="form-input" id="newArtContent" style="min-height:200px;" placeholder="&lt;h2&gt;Überschrift&lt;/h2&gt;&lt;p&gt;Text…&lt;/p&gt;"></textarea>
+    </div>
+    <div style="display:flex;gap:0.8rem;">
+        <button class="form-submit" style="flex:1;" onclick="publishNewArticle()">Veröffentlichen →</button>
+        <button class="form-submit" style="flex:none;background:var(--gray-mid);color:var(--white);width:auto;padding:1rem 1.5rem;" onclick="document.getElementById('newArticleForm').scrollIntoView()">Abbrechen</button>
+    </div>
+</div>
+<div class="featured-post reveal">
+    <div class="featured-post-visual">
+        <div class="featured-visual-inner">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h10M7 11h6"/></svg>
+            <div class="featured-visual-label">WEBDEV</div>
+        </div>
+        <div class="featured-badge">Featured</div>
+    </div>
+    <div class="featured-post-content">
+        <div>
+            <div class="post-category">// Security &amp; Web</div>
+            <h3 class="post-title">OWASP Top 10 für<br>Webentwickler: Praxis-Guide</h3>
+            <p class="post-excerpt">Wie ich die häufigsten Web-Sicherheitslücken verstehe und in meinen Hobby-Projekten vermeide. Von SQL-Injection bis XSS — ein ehrlicher Bericht aus der Lernperspektive mit echten Code-Beispielen.</p>
+        </div>
+        <div class="post-footer">
+            <div class="post-meta"><strong>Feb 2026</strong> · 12 min Lesezeit</div>
+            <a href="articles.html?article=owasp-top10" class="read-more">Lesen →</a>
+        </div>
+    </div>
+</div>
+<div class="blog-grid" id="blogGrid">
+    <a href="articles.html?article=react-performance" class="blog-card reveal">
+        <span class="card-num">01</span>
+        <svg class="card-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        <div class="card-category">Frontend</div>
+        <h3 class="card-title">React Performance: Was ich bisher gelernt habe</h3>
+        <p class="card-desc">useMemo, useCallback und Virtualisierung — meine Erfahrungen beim Optimieren.</p>
+        <div class="card-tags"><span class="tag">React</span><span class="tag">JavaScript</span></div>
+        <div class="card-date">Jan 2026 · 8 min</div>
+    </a>
+    <a href="articles.html?article=css-design" class="blog-card reveal reveal-delay-1">
+        <span class="card-num">02</span>
+        <svg class="card-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <div class="card-category">Design &amp; CSS</div>
+        <h3 class="card-title">Modernes CSS: Grid, Custom Properties &amp; Animationen</h3>
+        <p class="card-desc">Komplexe Layouts und Animationen ganz ohne Framework.</p>
+        <div class="card-tags"><span class="tag">CSS</span><span class="tag">Design</span></div>
+        <div class="card-date">Dez 2025 · 6 min</div>
+    </a>
+    <a href="articles.html?article=node-api" class="blog-card reveal reveal-delay-2">
+        <span class="card-num">03</span>
+        <svg class="card-icon" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <div class="card-category">Backend</div>
+        <h3 class="card-title">Meine erste REST-API mit Node.js &amp; Express</h3>
+        <p class="card-desc">Fehler, Learnings und erste Schritte im Backend.</p>
+        <div class="card-tags"><span class="tag">Node.js</span><span class="tag">Express</span></div>
+        <div class="card-date">Nov 2025 · 10 min</div>
+    </a>
+    <a href="articles.html?article=sql-basics" class="blog-card reveal">
+        <span class="card-num">04</span>
+        <svg class="card-icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        <div class="card-category">Datenbank</div>
+        <h3 class="card-title">PostgreSQL für Einsteiger</h3>
+        <p class="card-desc">Von CREATE TABLE bis Joins — Notizen aus dem Selbststudium.</p>
+        <div class="card-tags"><span class="tag">PostgreSQL</span><span class="tag">SQL</span></div>
+        <div class="card-date">Okt 2025 · 7 min</div>
+    </a>
+    <a href="articles.html?article=docker-basics" class="blog-card reveal reveal-delay-1">
+        <span class="card-num">05</span>
+        <svg class="card-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <div class="card-category">DevOps</div>
+        <h3 class="card-title">Docker: Vom Chaos zum Container</h3>
+        <p class="card-desc">Dockerfile schreiben, Images bauen, Container starten.</p>
+        <div class="card-tags"><span class="tag">Docker</span><span class="tag">DevOps</span></div>
+        <div class="card-date">Sep 2025 · 5 min</div>
+    </a>
+    <a href="articles.html?article=ai-experiments" class="blog-card reveal reveal-delay-2">
+        <span class="card-num">06</span>
+        <svg class="card-icon" viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V10a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/><path d="M9 12h6M12 9v6"/></svg>
+        <div class="card-category">AI / ML</div>
+        <h3 class="card-title">Meine ersten KI-Experimente: Python &amp; OpenAI API</h3>
+        <p class="card-desc">Als absoluter Einsteiger mit KI-APIs experimentieren.</p>
+        <div class="card-tags"><span class="tag">Python</span><span class="tag">AI</span></div>
+        <div class="card-date">Aug 2025 · 9 min</div>
+    </a>
+</div>
+<!-- Dynamic articles from admin -->
+<div id="dynamicArticles" style="margin-top:1px;"></div>
+<div style="text-align:center; margin-top:3rem;">
+    <a href="articles.html" class="btn btn-ghost">Alle Artikel ansehen →</a>
+</div>
+</section>
+<!-- ═══ ANKÜNDIGUNGEN / BLACKBOARD ═══ -->
+<section id="announcements">
+<div class="section-header reveal">
+    <div>
+        <div class="section-tag">// 02 — Blackboard</div>
+        <h2 class="section-title">Ankündigungen</h2>
+    </div>
+    <button id="addAnnBtn" onclick="openModal('annModal')" class="btn btn-ghost" style="display:none;font-size:0.72rem;padding:0.5rem 1rem;">+ Neu</button>
+</div>
+<div class="announcement-board" id="announcementBoard">
+    <!-- Populated by JS -->
+</div>
+<div id="annEmpty" style="display:none;text-align:center;padding:3rem;font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--gray-muted);">Noch keine Ankündigungen.</div>
+</section>
+<!-- ═══ ABOUT ═══ -->
+<section id="about">
+<div class="section-header reveal">
+    <div>
+        <div class="section-tag">// 03 — Über mich</div>
+        <h2 class="section-title">Wer ich bin</h2>
+    </div>
+</div>
+<div class="about-layout">
+    <div class="reveal">
+        <h3 class="about-headline">Code ist<br><em>meine Leidenschaft,</em><br>Lernen mein Antrieb.</h3>
+        <p class="about-text">Ich bin ein leidenschaftlicher Hobby-Entwickler aus Bayern, der in seiner Freizeit Web-Projekte baut und sich selbst beibringt, wie moderne Webtechnologien, Security-Konzepte und gutes Design funktionieren.</p>
+        <p class="about-text">Dieser Blog dokumentiert meinen Lernweg — ungefiltert, ehrlich und aus der Perspektive eines enthusiastischen Anfängers, der wächst. Ich bin kein Profi, aber ich lerne jeden Tag.</p>
+    </div>
+    <div class="about-code reveal reveal-delay-1">
+        <div class="code-comment">// about.ts — Stand 2026</div><br>
+        <div><span class="code-key">const </span><span style="color:#fff">developer</span><span class="code-bracket"> = {</span></div>
+        <div>&nbsp;&nbsp;<span class="code-key">name:</span> <span class="code-string">"Michael Zellner"</span>,</div>
+        <div>&nbsp;&nbsp;<span class="code-key">location:</span> <span class="code-string">"Bayern, Deutschland"</span>,</div>
+        <div>&nbsp;&nbsp;<span class="code-key">type:</span> <span class="code-string">"Hobby-Dev (Fullstack, lernend)"</span>,</div>
+        <div>&nbsp;&nbsp;<span class="code-key">focus:</span> <span class="code-bracket">[</span><span class="code-string">"Web"</span>, <span class="code-string">"Security"</span>, <span class="code-string">"Design"</span><span class="code-bracket">]</span>,</div>
+        <div>&nbsp;&nbsp;<span class="code-key">status:</span> <span class="code-string">"always learning"</span></div>
+        <div><span class="code-bracket">};</span></div>
+        <br><div class="code-comment">// Ich lerne, ich experimentiere, ich wachse.</div>
+    </div>
+</div>
+</section>
+<!-- ═══ CONTACT ═══ -->
+<section id="contact">
+<div class="section-header reveal">
+    <div>
+        <div class="section-tag">// 04 — Kontakt</div>
+        <h2 class="section-title">Zusammenarbeiten</h2>
+    </div>
+</div>
+<div class="contact-layout">
+    <div class="reveal">
+        <h3 class="contact-big">Lass uns<br><em>reden.</em></h3>
+        <p class="contact-sub">Ich bin offen für Austausch, gemeinsame Lernprojekte und interessante Gespräche über Webtechnologien und Design.</p>
+        <div class="contact-links">
+            <a href="mailto:kontakt@mz-dev.de" class="contact-link">
+                <span>kontakt@mz-dev.de</span><span class="arrow">→</span>
+            </a>
+            <a href="tel:+0123456789" class="contact-link">
+                <span>+01 234 567 89</span><span class="arrow">→</span>
+            </a>
+            <a href="https://github.com/michaelzellner404" target="_blank" rel="noopener noreferrer" class="contact-link">
+                <span>GitHub: MichaelZellner404</span><span class="arrow">→</span>
+            </a>
+        </div>
+    </div>
+    <div class="contact-form-area reveal reveal-delay-1">
+        <div class="form-title">Nachricht schicken</div>
+        <form onsubmit="return false;">
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-input" placeholder="Max Mustermann">
+            </div>
+            <div class="form-group">
+                <label class="form-label">E-Mail</label>
+                <input type="email" class="form-input" placeholder="mail@beispiel.de">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nachricht</label>
+                <textarea class="form-input" placeholder="Dein Projekt, deine Idee…"></textarea>
+            </div>
+            <button type="submit" class="form-submit" onclick="MZDEV.showToast('Nachricht gesendet! (Demo)', 'success')">Senden →</button>
+        </form>
+    </div>
+</div>
+</section>
+<footer>
+<div class="footer-logo">MZ<span>.</span>DEV</div>
+<div class="footer-copy">© 2026 Michael Zellner · Hobby-Dev aus Bayern</div>
+<div class="footer-links">
+    <a href="articles.html">Artikel</a>
+    <a href="projects.html">Projekte</a>
+    <a href="skills.html">Skills</a>
+    <a href="search.html">Suche</a>
+    <a href="https://github.com/michaelzellner404" target="_blank" rel="noopener noreferrer">GitHub</a>
+</div>
+</footer>
+<!-- ═══ CHAT PANEL ═══ -->
+<div class="chat-panel" id="chatPanel">
+<div class="chat-header" onclick="toggleChatPanel()">
+    <svg style="width:16px;height:16px;fill:none;stroke:var(--yellow);stroke-width:1.8;stroke-linecap:round;" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span class="chat-header-title">Nachrichten</span>
+    <span id="chat-with" style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--gray-muted);"></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--gray-muted);margin-left:auto;">🔒 E2E</span>
+</div>
+<div class="chat-body" id="chatBody">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--gray-muted);text-align:center;padding:2rem;">Ende-zu-Ende verschlüsselt · Privat</div>
+</div>
+<div class="chat-footer">
+    <input class="chat-input" id="chatInput" placeholder="Nachricht…" onkeydown="if(event.key==='Enter')sendChatMessage()">
+    <button class="chat-send" onclick="sendChatMessage()">→</button>
+</div>
+</div>
+<script src="../shared.js"></script>
+<script src="../api.js"></script>
+<script>
+// ═══════════════════════════════════════════════════
+// CURSOR
+// ═══════════════════════════════════════════════════
+const cursor = document.getElementById('cursor');
+let mouseX=0,mouseY=0,curX=0,curY=0;
+document.addEventListener('mousemove', e => { mouseX=e.clientX; mouseY=e.clientY; });
+function animateCursor() {
+curX+=(mouseX-curX)*0.15; curY+=(mouseY-curY)*0.15;
+if(cursor){cursor.style.left=curX+'px';cursor.style.top=curY+'px';}
+requestAnimationFrame(animateCursor);
+}
+animateCursor();
+document.addEventListener('mouseover', e => {
+if(e.target.matches('a,button,.blog-card,.contact-link,.icon-btn,.pd-item,.modal-tab,.filter-btn')) cursor&&cursor.classList.add('hover');
+else cursor&&cursor.classList.remove('hover');
+});
+// ═══════════════════════════════════════════════════
+// REVEAL
+// ═══════════════════════════════════════════════════
+const revealObserver = new IntersectionObserver(entries => {
+entries.forEach(e => { if(e.isIntersecting){e.target.classList.add('visible');revealObserver.unobserve(e.target);} });
+},{threshold:0.1,rootMargin:'0px 0px -50px 0px'});
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+document.querySelectorAll('.hero .reveal').forEach(el => setTimeout(()=>el.classList.add('visible'),100));
+// Skill bars
+const barObs = new IntersectionObserver(entries=>{
+entries.forEach(e=>{if(e.isIntersecting){e.target.style.transform=`scaleX(${e.target.dataset.width})`;e.target.classList.add('animated');barObs.unobserve(e.target);}});
+},{threshold:0.3});
+document.querySelectorAll('.skill-bar-fill').forEach(b=>barObs.observe(b));
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+a.addEventListener('click',function(e){
+    const h=this.getAttribute('href');
+    if(h.length>1&&document.querySelector(h)){e.preventDefault();document.querySelector(h).scrollIntoView({behavior:'smooth',block:'start'});}
+});
+});
+// Terminal
+document.querySelectorAll('#terminalBody > div').forEach((l,i)=>{
+l.style.opacity='0';
+setTimeout(()=>{l.style.opacity='1';l.style.transition='opacity 0.3s';},800+i*250);
+});
+// ═══════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
+});
+function switchTab(tab) {
+    const tabs=['github','google','discord','twitch','reddit','spotify','admin'];
+    tabs.forEach((t,i)=>{
+        const btn = document.querySelector('#authTabs button:nth-child('+(i+1)+')');
+        if(btn) btn.classList.toggle('active',t===tab);
+        const form = document.getElementById('form-'+t);
+        if(form) form.classList.toggle('active',t===tab);
+    });
+}
+
+// ═══════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════
+// OAuth login — redirect to backend OAuth flow
+function handleGithubLogin() { API.oauthLogin('github'); }
+function handleProviderLogin(provider) { API.oauthLogin(provider); }
+// Admin login via backend API
+async function handleAdmin() {
+    const pw = document.getElementById('admin-password').value;
+    const errEl = document.getElementById('admin-error');
+    errEl.textContent = '';
+    if (!pw) { errEl.textContent = '// Bitte Passwort eingeben'; return; }
+    try {
+        await API.adminLogin(pw);
+        closeModal('authModal');
+        updateUI();
+        activateAdminMode();
+        MZDEV.showToast('Admin-Modus aktiv', 'success');
+    } catch (e) {
+        errEl.textContent = '// ' + e.message;
+    }
+}
+// Logout via backend API
+async function handleLogout() {
+    await API.logout();
+    deactivateAdminMode();
+    updateUI();
+    MZDEV.showToast('Abgemeldet');
+}
+// ═══════════════════════════════════════════════════
+// UI UPDATE
+// ═══════════════════════════════════════════════════
+function updateUI() {
+    const user = MZDEV.currentUser;
+    const isAdmin = MZDEV.isAdmin;
+    const dot=document.getElementById('online-dot');
+    const pdUsername=document.getElementById('pd-username');
+    const pdRole=document.getElementById('pd-role');
+    const pdLoggedin=document.getElementById('pd-loggedin');
+    const pdLoggedout=document.getElementById('pd-loggedout');
+    const accountIcon=document.getElementById('accountIcon');
+    const accountAvatar=document.getElementById('accountAvatar');
+    const chatBtn=document.getElementById('chatToggleBtn');
+    const addAnnBtn=document.getElementById('addAnnBtn');
+    if(user){
+        dot.classList.add('visible');
+        pdUsername.textContent=user.displayName||user.username;
+        pdRole.textContent=isAdmin?'// ADMIN':`// ${(user.provider||'').toUpperCase()} · ${user.username}`;
+        pdLoggedin.style.display='block';
+        pdLoggedout.style.display='none';
+        if(chatBtn)chatBtn.style.display='flex';
+        if(addAnnBtn&&isAdmin)addAnnBtn.style.display='block';
+        // Avatar
+        if(user.avatar){
+            accountIcon.style.display='none';
+            accountAvatar.src=user.avatar;
+            accountAvatar.style.display='block';
+            // pd avatar
+            document.getElementById('pd-avatar-wrap').innerHTML=`<img src="${user.avatar}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`;
+        } else {
+            accountIcon.style.display='';
+            accountAvatar.style.display='none';
+        }
+        // Admin button
+        const admBtn=document.getElementById('pd-admin-btn');
+        if(admBtn)admBtn.style.display=isAdmin?'flex':'none';
+        // Verified badges
+        const vEl=document.getElementById('pd-verified');
+        const services=user.connectedServices||[];
+        if(services.length>0){
+            vEl.style.display='flex';
+            vEl.innerHTML=services.map(s=>
+                `<span class="verified-badge">${s.toUpperCase()} Verified ✓</span>`
+            ).join('');
+        } else vEl.style.display='none';
+        if(isAdmin)activateAdminMode();
+    } else {
+        dot.classList.remove('visible');
+        pdUsername.textContent='Gast';
+        pdRole.textContent='// NICHT ANGEMELDET';
+        pdLoggedin.style.display='none';
+        pdLoggedout.style.display='block';
+        accountIcon.style.display='';
+        accountAvatar.style.display='none';
+        if(chatBtn)chatBtn.style.display='none';
+        if(addAnnBtn)addAnnBtn.style.display='none';
+        document.getElementById('pd-verified').style.display='none';
+        document.getElementById('pd-avatar-wrap').innerHTML='<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:var(--gray-muted);stroke-width:1.8;stroke-linecap:round;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    }
+}
+// ═══════════════════════════════════════════════════
+// DROPDOWN
+// ═══════════════════════════════════════════════════
+function toggleProfileDropdown(){document.getElementById('profileDropdown').classList.toggle('open');}
+function closeDropdown(){document.getElementById('profileDropdown').classList.remove('open');}
+document.addEventListener('click',e=>{
+    const wrap=document.querySelector('.profile-wrap');
+    if(wrap&&!wrap.contains(e.target))closeDropdown();
+});
+// ═══════════════════════════════════════════════════
+// ADMIN MODE
+// ═══════════════════════════════════════════════════
+function activateAdminMode(){
+    document.body.classList.add('admin-mode');
+    document.getElementById('addAnnBtn').style.display='block';
+}
+function deactivateAdminMode(){
+    document.body.classList.remove('admin-mode');
+    const btn=document.getElementById('addAnnBtn');
+    if(btn)btn.style.display='none';
+}
+function exitAdminMode(){
+    deactivateAdminMode();
+    MZDEV.showToast('Bearbeitungsmodus beendet');
+}
+function toggleAdminModeFromDropdown(){
+    if(document.body.classList.contains('admin-mode'))exitAdminMode();
+    else activateAdminMode();
+    closeDropdown();
+}
+function saveAllAdminChanges(){
+    MZDEV.showToast('Alle Änderungen gespeichert!','success');
+}
+function scrollToNewArticle(){
+    document.getElementById('newArticleForm').scrollIntoView({behavior:'smooth'});
+    document.getElementById('newArtTitle').focus();
+}
+// ═══════════════════════════════════════════════════
+// NEW ARTICLE (Admin)
+// ═══════════════════════════════════════════════════
+function publishNewArticle(){
+    const title=document.getElementById('newArtTitle').value.trim();
+    const cat=document.getElementById('newArtCat').value;
+    const read=document.getElementById('newArtRead').value.trim()||'5 min';
+    const tags=document.getElementById('newArtTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+    const excerpt=document.getElementById('newArtExcerpt').value.trim();
+    const content=document.getElementById('newArtContent').value.trim();
+    if(!title||!excerpt){MZDEV.showToast('Titel und Beschreibung sind Pflichtfelder','error');return;}
+    const id='article-'+Date.now();
+    const now=new Date();
+    const months=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+    const dateStr=months[now.getMonth()]+' '+now.getFullYear();
+    const article={id,title,category:cat,date:dateStr,ts:parseInt(now.toISOString().replace(/-/g,'').slice(0,8)),readtime:read,excerpt,tags,content,featured:false};
+    const extras=MZDEV.storedArticles;
+    extras.push(article);
+    MZDEV.saveArticles(extras);
+    renderDynamicArticles();
+    ['newArtTitle','newArtRead','newArtTags','newArtExcerpt','newArtContent'].forEach(id=>document.getElementById(id).value='');
+    MZDEV.showToast(`Artikel "${title}" veröffentlicht!`,'success');
+}
+function renderDynamicArticles(){
+    const extras=MZDEV.storedArticles;
+    const container=document.getElementById('dynamicArticles');
+    if(!extras.length){container.innerHTML='';return;}
+    container.innerHTML=extras.map((a,i)=>`
+        <div class="blog-card" style="border:1px solid var(--border);margin-bottom:1px;display:flex;flex-direction:column;gap:0.8rem;padding:2rem;background:var(--black);position:relative;text-decoration:none;color:inherit;">
+            ${MZDEV.isAdmin?`<div style="position:absolute;top:1rem;right:1rem;display:flex;gap:0.5rem;">
+                <button onclick="editDynamicArticle(${i})" style="background:rgba(245,230,66,0.15);border:1px solid rgba(245,230,66,0.3);color:var(--yellow);font-family:'IBM Plex Mono',monospace;font-size:0.65rem;padding:0.25rem 0.6rem;cursor:pointer;">Bearbeiten</button>
+                <button onclick="deleteDynamicArticle(${i})" style="background:rgba(255,95,87,0.15);border:1px solid rgba(255,95,87,0.3);color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:0.65rem;padding:0.25rem 0.6rem;cursor:pointer;">Löschen</button>
+            </div>`:''}
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--yellow);letter-spacing:0.2em;">${a.category} · ${a.date} · ${a.readtime}</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--white);">${a.title}</div>
+            <div style="font-size:0.88rem;color:var(--gray-muted);line-height:1.6;">${a.excerpt}</div>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">${a.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+            <a href="articles.html?article=${a.id}" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--yellow);text-decoration:none;margin-top:0.5rem;">Lesen →</a>
+        </div>
+    `).join('');
+}
+function deleteDynamicArticle(i){
+    const extras=MZDEV.storedArticles;
+    if(confirm(`Artikel "${extras[i].title}" wirklich löschen?`)){
+        extras.splice(i,1);MZDEV.saveArticles(extras);renderDynamicArticles();MZDEV.showToast('Artikel gelöscht');
+    }
+}
+function editDynamicArticle(i){
+    const extras=MZDEV.storedArticles;
+    const a=extras[i];
+    document.getElementById('newArtTitle').value=a.title;
+    document.getElementById('newArtCat').value=a.category;
+    document.getElementById('newArtRead').value=a.readtime;
+    document.getElementById('newArtTags').value=a.tags.join(', ');
+    document.getElementById('newArtExcerpt').value=a.excerpt;
+    document.getElementById('newArtContent').value=a.content;
+    extras.splice(i,1);MZDEV.saveArticles(extras);renderDynamicArticles();
+    scrollToNewArticle();MZDEV.showToast('Artikel zum Bearbeiten geladen');
+}
+// ═══════════════════════════════════════════════════
+// ANNOUNCEMENTS
+// ═══════════════════════════════════════════════════
+const DEFAULT_ANNOUNCEMENTS = [
+    {id:'ann1',type:'Update',title:'Website v2.0 gelauncht!',text:'Neue Features: Admin-Modus, Nutzerkonten, Kommentare und mehr. Viel Spaß beim Erkunden!',date:'Feb 2026'},
+    {id:'ann2',type:'Projekt',title:'Neues Projekt in Arbeit',text:'Ich arbeite gerade an einem neuen Web-Security-Tool. Details folgen demnächst auf der Projekte-Seite.',date:'Feb 2026'},
+];
+function renderAnnouncements(){
+    const all=[...DEFAULT_ANNOUNCEMENTS,...MZDEV.announcements];
+    const board=document.getElementById('announcementBoard');
+    const empty=document.getElementById('annEmpty');
+    if(all.length===0){board.style.display='none';empty.style.display='block';return;}
+    board.style.display='flex';board.style.flexDirection='column';empty.style.display='none';
+    board.innerHTML=all.map(a=>`
+        <div class="announcement-item">
+            <div class="ann-icon"><svg viewBox="0 0 24 24"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg></div>
+            <div class="ann-content">
+                <div class="ann-type">${a.type}</div>
+                <div class="ann-title">${a.title}</div>
+                <div class="ann-text">${a.text}</div>
+                <div class="ann-date">${a.date}</div>
+            </div>
+            <div class="ann-admin-actions">
+                <button class="ann-action-btn" onclick="deleteAnnouncement('${a.id}')">✕ Löschen</button>
+            </div>
+        </div>
+    `).join('');
+}
+function publishAnnouncement(){
+    const type=document.getElementById('ann-type-input').value;
+    const title=document.getElementById('ann-title-input').value.trim();
+    const text=document.getElementById('ann-text-input').value.trim();
+    if(!title||!text){MZDEV.showToast('Titel und Text sind Pflichtfelder','error');return;}
+    const ann={id:'ann-'+Date.now(),type,title,text,date:new Date().toLocaleDateString('de-DE',{month:'short',year:'numeric'})};
+    const anns=MZDEV.announcements;anns.push(ann);MZDEV.saveAnnouncements(anns);
+    renderAnnouncements();closeModal('annModal');
+    ['ann-title-input','ann-text-input'].forEach(id=>document.getElementById(id).value='');
+    MZDEV.showToast('Ankündigung veröffentlicht!','success');
+}
+function deleteAnnouncement(id){
+    const anns=MZDEV.announcements.filter(a=>a.id!==id);
+    MZDEV.saveAnnouncements(anns);renderAnnouncements();MZDEV.showToast('Ankündigung gelöscht');
+}
+// ═══════════════════════════════════════════════════
+// IMAGE UPLOAD (Admin)
+// ═══════════════════════════════════════════════════
+function handleHeroImageUpload(e){
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(ev){
+        const img=document.getElementById('heroImg');
+        img.src=ev.target.result;
+        img.parentElement.style.display='';
+        document.getElementById('heroImgPlaceholder').style.display='none';
+        localStorage.setItem('mzdev_hero_img',ev.target.result);
+        MZDEV.showToast('Bild hochgeladen!','success');
+    };
+    reader.readAsDataURL(file);
+}
+function handleAdminImageUpload(e){
+    handleHeroImageUpload(e); // Could extend for different targets
+}
+// Restore saved hero image
+const savedHeroImg=localStorage.getItem('mzdev_hero_img');
+if(savedHeroImg){
+    const img=document.getElementById('heroImg');
+    img.src=savedHeroImg;img.parentElement.style.display='';
+    document.getElementById('heroImgPlaceholder').style.display='none';
+}
+// ═══════════════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════════════
+function toggleChatPanel(){document.getElementById('chatPanel').classList.toggle('open');}
+function openChatPanel(){document.getElementById('chatPanel').classList.add('open');}
+function sendChatMessage(){
+    const user=MZDEV.currentUser;
+    if(!user){MZDEV.showToast('Bitte erst anmelden','error');return;}
+    const input=document.getElementById('chatInput');
+    const msg=input.value.trim();if(!msg)return;
+    const filtered=MZDEV.filterContent(msg);
+    if(!filtered){MZDEV.showToast('Nachricht enthält ungültige Inhalte','error');return;}
+    const encrypted=MZDEV.xorEncrypt(msg);
+    const chatBody=document.getElementById('chatBody');
+    const el=document.createElement('div');
+    el.className='chat-msg me';
+    el.innerHTML=`${msg}<div class="chat-msg-meta">${user.username} · jetzt</div>`;
+    chatBody.appendChild(el);chatBody.scrollTop=chatBody.scrollHeight;
+    const msgs=MZDEV.messages;
+    const key=user.username;
+    if(!msgs[key])msgs[key]=[];
+    msgs[key].push({from:user.username,text:encrypted,ts:Date.now()});
+    MZDEV.saveMessages(msgs);
+    input.value='';
+}
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+
+MZDEV.applyTheme();
+// Handle OAuth callback if returning from provider
+(async function() {
+    const handled = await API.handleAuthCallback();
+    updateUI();
+    renderDynamicArticles();
+    renderAnnouncements();
+})();
+// Open auth modal if requested (from articles page link)
+if(sessionStorage.getItem('openAuth')==='1'){
+    sessionStorage.removeItem('openAuth');
+    openModal('authModal');
+}
+</script>
+</body>
+</html>

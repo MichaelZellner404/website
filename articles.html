@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artikel | Michael Zellner Dev Blog</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --black: #000000; --white: #ffffff; --yellow: #f5e642;
+            --gray-dark: #111111; --gray-mid: #222222; --gray-light: #333333;
+            --gray-muted: #888888; --border: rgba(255,255,255,0.1);
+            --red: #ff5f57; --green: #28ca42;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'IBM Plex Sans', sans-serif; background: var(--black); color: var(--white); overflow-x: hidden; line-height: 1.6; cursor: none; }
+        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 9998; opacity: 0.5; }
+
+        /* ── CURSOR ── */
+        .cursor { position: fixed; width: 12px; height: 12px; background: var(--yellow); border-radius: 50%; pointer-events: none; z-index: 99999; transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s; mix-blend-mode: difference; }
+        .cursor.hover { width: 40px; height: 40px; }
+
+        /* ── TOAST ── */
+        .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--gray-dark); border: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--white); padding: 0.8rem 1.5rem; z-index: 99998; opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.success { border-color: var(--green); color: var(--green); }
+        .toast.error { border-color: var(--red); color: var(--red); }
+
+        /* ── SHARED HEADER ── */
+        header { position: sticky; top: 0; z-index: 1000; background: var(--black); border-bottom: 1px solid var(--border); padding: 0 5%; display: flex; align-items: center; height: 64px; gap: 0; }
+        .logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.1em; color: var(--white); text-decoration: none; flex-shrink: 0; }
+        .logo span { color: var(--yellow); }
+        .header-rule { flex: 1; height: 1px; background: var(--border); margin: 0 2rem; }
+        nav { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+        nav a { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--gray-muted); text-decoration: none; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.2s; white-space: nowrap; }
+        nav a:hover { color: var(--yellow); }
+        nav a.nav-cta { background: var(--yellow); color: var(--black); padding: 0.4rem 0.9rem; font-weight: 700; }
+        nav a.nav-cta:hover { background: var(--white); color: var(--black); }
+        .header-actions { display: flex; align-items: center; gap: 0.4rem; margin-left: 0.8rem; flex-shrink: 0; }
+        .icon-btn { width: 36px; height: 36px; background: transparent; border: 1px solid var(--border); color: var(--gray-muted); display: flex; align-items: center; justify-content: center; cursor: none; transition: all 0.2s; position: relative; flex-shrink: 0; padding: 0; }
+        .icon-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+        .icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .online-dot { position: absolute; bottom: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--green); border: 1px solid var(--black); display: none; }
+        .online-dot.visible { display: block; }
+        .profile-wrap { position: relative; }
+        .profile-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--gray-dark); border: 1px solid var(--border); min-width: 220px; z-index: 2000; display: none; box-shadow: 0 8px 32px rgba(0,0,0,0.8); }
+        .profile-dropdown.open { display: block; }
+        .pd-user { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.8rem; align-items: center; }
+        .pd-avatar { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--gray-mid); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .pd-avatar svg { width: 18px; height: 18px; fill: none; stroke: var(--gray-muted); stroke-width: 1.8; }
+        .pd-info { flex: 1; min-width: 0; }
+        .pd-username { font-family: 'Bebas Neue', sans-serif; font-size: 1.05rem; color: var(--white); letter-spacing: 0.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .pd-role { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--yellow); letter-spacing: 0.1em; }
+        .pd-verified { display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0.5rem 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .verified-badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; background: rgba(40,202,66,0.15); border: 1px solid rgba(40,202,66,0.3); color: var(--green); padding: 0.15rem 0.45rem; letter-spacing: 0.08em; }
+        .pd-item { padding: 0.75rem 1.2rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--gray-muted); cursor: none; transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; display: flex; align-items: center; gap: 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.04); text-decoration: none; }
+        .pd-item:hover { color: var(--white); background: rgba(255,255,255,0.04); }
+        .pd-item.danger:hover { color: var(--red); }
+        .pd-item svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+
+        /* ── ADMIN ── */
+        .admin-indicator { display: none; background: var(--yellow); color: var(--black); text-align: center; padding: 0.35rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.15em; position: sticky; top: 64px; z-index: 999; }
+        body.admin-mode .admin-indicator { display: block; }
+        .admin-toolbar { display: none; position: fixed; bottom: 2rem; right: 2rem; background: var(--yellow); color: var(--black); padding: 0.7rem 1.2rem; z-index: 5000; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; gap: 0.8rem; align-items: center; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); flex-wrap: wrap; max-width: 420px; }
+        body.admin-mode .admin-toolbar { display: flex; }
+        .admin-tool-btn { background: var(--black); color: var(--yellow); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; font-weight: 700; padding: 0.3rem 0.7rem; cursor: pointer; }
+        .admin-tool-btn:hover { background: var(--gray-dark); }
+        body.admin-mode [contenteditable="true"] { outline: 1px dashed rgba(245,230,66,0.4); background: rgba(245,230,66,0.03); min-height: 1em; transition: outline 0.2s; }
+        body.admin-mode [contenteditable="true"]:focus { outline: 1px solid var(--yellow); background: rgba(245,230,66,0.06); }
+
+        /* ── PAGE HERO ── */
+        .page-hero { padding: 5rem 5% 3rem; border-bottom: 1px solid var(--border); }
+        .page-tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--yellow); letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 1rem; }
+        .page-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(3rem, 6vw, 5rem); line-height: 1; letter-spacing: 0.02em; margin-bottom: 1rem; }
+        .page-sub { color: var(--gray-muted); font-size: 1rem; max-width: 500px; line-height: 1.7; }
+
+        /* ── SEARCH & FILTER ── */
+        .search-area { padding: 2rem 5%; border-bottom: 1px solid var(--border); display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+        .search-wrap { flex: 1; min-width: 240px; position: relative; display: flex; align-items: center; }
+        .search-icon { position: absolute; left: 1rem; width: 16px; height: 16px; fill: none; stroke: var(--gray-muted); stroke-width: 2; stroke-linecap: round; pointer-events: none; }
+        .search-input { width: 100%; background: var(--gray-dark); border: 1px solid var(--border); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; padding: 0.75rem 1rem 0.75rem 2.8rem; outline: none; transition: border-color 0.2s; caret-color: var(--yellow); }
+        .search-input:focus { border-color: var(--yellow); }
+        .search-input::placeholder { color: var(--gray-muted); }
+        .filter-group { display: flex; gap: 1px; background: var(--border); border: 1px solid var(--border); flex-wrap: wrap; }
+        .filter-btn { padding: 0.75rem 1.1rem; background: var(--black); font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-muted); border: none; cursor: none; transition: all 0.2s; }
+        .filter-btn:hover { color: var(--white); background: var(--gray-dark); }
+        .filter-btn.active { background: var(--yellow); color: var(--black); font-weight: 700; }
+        .sort-select { background: var(--gray-dark); border: 1px solid var(--border); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; padding: 0.75rem 1rem; outline: none; cursor: pointer; }
+        .sort-select option { background: var(--gray-dark); }
+
+        /* ── ARTICLES ── */
+        .articles-container { padding: 3rem 5%; }
+        .articles-count { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--gray-muted); margin-bottom: 2rem; letter-spacing: 0.1em; }
+        .articles-count span { color: var(--yellow); }
+        .article-item { border: 1px solid var(--border); margin-bottom: 1px; background: var(--black); transition: border-color 0.2s; position: relative; }
+        .article-item:hover { border-color: rgba(245,230,66,0.3); background: var(--gray-dark); }
+        .article-header { padding: 2rem; display: grid; grid-template-columns: auto 1fr auto; gap: 2rem; align-items: start; cursor: none; }
+        .article-num { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: rgba(255,255,255,0.08); line-height: 1; }
+        .article-meta-row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
+        .article-cat { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--yellow); letter-spacing: 0.2em; text-transform: uppercase; }
+        .article-date, .article-readtime { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--gray-muted); }
+        .article-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; line-height: 1.05; letter-spacing: 0.02em; color: var(--white); margin-bottom: 0.7rem; }
+        .article-excerpt { color: var(--gray-muted); font-size: 0.9rem; line-height: 1.7; }
+        .article-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 1rem; }
+        .tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.07); padding: 0.2rem 0.5rem; }
+        .article-actions { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; }
+        .expand-btn { background: var(--yellow); color: var(--black); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.5rem 1rem; cursor: none; transition: background 0.2s; white-space: nowrap; }
+        .expand-btn:hover { background: var(--white); }
+        .reaction-row { display: flex; gap: 0.5rem; align-items: center; }
+        .reaction-btn { display: flex; align-items: center; gap: 0.4rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--gray-muted); font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; padding: 0.35rem 0.7rem; cursor: none; transition: all 0.2s; }
+        .reaction-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+        .reaction-btn.liked { background: rgba(40,202,66,0.1); border-color: var(--green); color: var(--green); }
+        .reaction-btn.disliked { background: rgba(255,95,87,0.1); border-color: var(--red); color: var(--red); }
+        .reaction-btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .download-btn { display: flex; align-items: center; gap: 0.4rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--gray-muted); font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; padding: 0.3rem 0.6rem; cursor: none; transition: all 0.2s; position: relative; }
+        .download-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+        .download-btn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+        .download-menu { position: absolute; right: 0; top: 100%; background: var(--gray-dark); border: 1px solid var(--border); z-index: 100; display: none; min-width: 140px; }
+        .download-menu.open { display: block; }
+        .dl-item { display: block; width: 100%; padding: 0.6rem 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--gray-muted); background: none; border: none; text-align: left; cursor: pointer; transition: all 0.15s; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .dl-item:hover { color: var(--white); background: rgba(255,255,255,0.05); }
+
+        /* Admin article actions */
+        .article-admin-actions { display: none; gap: 0.5rem; flex-wrap: wrap; }
+        body.admin-mode .article-admin-actions { display: flex; }
+        .a-admin-btn { background: none; border: 1px solid var(--border); color: var(--gray-muted); font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; padding: 0.25rem 0.6rem; cursor: pointer; transition: all 0.2s; }
+        .a-admin-btn.edit { border-color: rgba(245,230,66,0.3); color: rgba(245,230,66,0.7); }
+        .a-admin-btn.edit:hover { border-color: var(--yellow); color: var(--yellow); }
+        .a-admin-btn.del { border-color: rgba(255,95,87,0.3); color: rgba(255,95,87,0.7); }
+        .a-admin-btn.del:hover { border-color: var(--red); color: var(--red); }
+
+        /* ── ARTICLE BODY ── */
+        .article-body { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.22,1,0.36,1); border-top: 0 solid var(--border); }
+        .article-body.open { max-height: 8000px; border-top: 1px solid var(--border); }
+        .article-content { padding: 3rem; max-width: 780px; font-size: 1rem; line-height: 1.9; color: rgba(255,255,255,0.8); }
+        .article-content h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: var(--white); letter-spacing: 0.02em; margin: 2.5rem 0 1rem; }
+        .article-content h3 { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; color: var(--yellow); letter-spacing: 0.05em; margin: 2rem 0 0.8rem; }
+        .article-content p { margin-bottom: 1.2rem; }
+        .article-content code { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); padding: 0.15rem 0.4rem; color: var(--yellow); }
+        .article-content pre { background: var(--gray-dark); border: 1px solid var(--border); border-left: 3px solid var(--yellow); padding: 1.5rem; margin: 1.5rem 0; overflow-x: auto; }
+        .article-content pre code { background: none; border: none; padding: 0; font-size: 0.82rem; color: var(--white); line-height: 1.7; }
+        .article-content ul, .article-content ol { padding-left: 1.5rem; margin-bottom: 1.2rem; }
+        .article-content li { margin-bottom: 0.4rem; }
+        .article-content blockquote { border-left: 3px solid var(--yellow); padding: 1rem 1.5rem; margin: 1.5rem 0; background: rgba(245,230,66,0.05); color: var(--gray-muted); font-style: italic; }
+        .article-content strong { color: var(--white); font-weight: 600; }
+        .article-content a { color: var(--yellow); text-decoration: none; }
+        .article-content a:hover { text-decoration: underline; }
+
+        /* ── EDIT PANEL ── */
+        .article-edit-panel { display: none; padding: 1.5rem 3rem; background: rgba(245,230,66,0.03); border-top: 1px dashed rgba(245,230,66,0.2); }
+        body.admin-mode .article-edit-panel { display: block; }
+        .edit-panel-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--yellow); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1rem; }
+        .edit-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .edit-field { display: flex; flex-direction: column; gap: 0.3rem; }
+        .edit-field label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--gray-muted); letter-spacing: 0.15em; }
+        .edit-field input, .edit-field select { background: var(--gray-dark); border: 1px solid var(--border); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; padding: 0.5rem 0.7rem; outline: none; }
+        .edit-field input:focus, .edit-field select:focus { border-color: var(--yellow); }
+        .edit-content-area { width: 100%; min-height: 300px; background: var(--gray-dark); border: 1px solid rgba(245,230,66,0.3); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; padding: 1.2rem; line-height: 1.7; outline: none; resize: vertical; caret-color: var(--yellow); }
+        .edit-content-area:focus { border-color: var(--yellow); }
+        .edit-actions { display: flex; gap: 0.8rem; margin-top: 1rem; align-items: center; }
+        .edit-save-btn { background: var(--yellow); color: var(--black); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 700; padding: 0.6rem 1.4rem; cursor: pointer; }
+        .edit-save-btn:hover { background: var(--white); }
+        .edit-discard-btn { background: transparent; color: var(--gray-muted); border: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; padding: 0.6rem 1rem; cursor: pointer; }
+        .edit-discard-btn:hover { color: var(--white); border-color: var(--white); }
+        .edit-saved-msg { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--green); display: none; }
+        .edit-saved-msg.show { display: block; }
+
+        /* ── COMMENTS ── */
+        .comments-section { padding: 2rem 3rem; border-top: 1px solid var(--border); background: rgba(255,255,255,0.015); }
+        .comments-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--yellow); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1.5rem; }
+        .comment-form { display: flex; gap: 0.8rem; margin-bottom: 2rem; }
+        .comment-input { flex: 1; background: var(--black); border: 1px solid var(--border); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; padding: 0.7rem 1rem; outline: none; transition: border-color 0.2s; caret-color: var(--yellow); }
+        .comment-input:focus { border-color: var(--yellow); }
+        .comment-submit { background: var(--yellow); color: var(--black); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; font-weight: 700; padding: 0.7rem 1.2rem; cursor: none; white-space: nowrap; }
+        .comment-submit:hover { background: var(--white); }
+        .comment-login-hint { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--gray-muted); margin-bottom: 1.5rem; }
+        .comment-login-hint a { color: var(--yellow); cursor: none; text-decoration: none; }
+        .comment { padding: 1rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; gap: 1rem; }
+        .comment-avatar { width: 32px; height: 32px; background: var(--gray-mid); border: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; overflow: hidden; }
+        .comment-avatar svg { width: 16px; height: 16px; fill: none; stroke: var(--gray-muted); stroke-width: 1.8; }
+        .comment-avatar.admin-av { border-color: var(--yellow); }
+        .comment-body { flex: 1; }
+        .comment-name { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--white); font-weight: 600; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; }
+        .admin-badge { font-size: 0.58rem; background: var(--yellow); color: var(--black); padding: 0.1rem 0.4rem; letter-spacing: 0.1em; }
+        .comment-time { font-size: 0.62rem; color: var(--gray-muted); font-weight: 400; }
+        .comment-text { font-size: 0.88rem; color: rgba(255,255,255,0.7); line-height: 1.6; }
+        .comment-actions { display: none; gap: 0.5rem; margin-top: 0.5rem; }
+        body.admin-mode .comment-actions { display: flex; }
+        .comment-del-btn { background: none; border: 1px solid rgba(255,95,87,0.3); color: rgba(255,95,87,0.7); font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; padding: 0.15rem 0.4rem; cursor: pointer; }
+        .comment-del-btn:hover { border-color: var(--red); color: var(--red); }
+
+        /* ── NO RESULTS ── */
+        .no-results { text-align: center; padding: 4rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--gray-muted); }
+        .no-results-big { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: rgba(255,255,255,0.04); margin-bottom: 1rem; }
+
+        /* ── FOOTER ── */
+        .articles-footer { background: var(--gray-dark); border-top: 1px solid var(--border); padding: 2rem 5%; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--gray-muted); }
+
+        /* ── CHAT ── */
+        .chat-panel { position: fixed; bottom: 0; right: 2rem; width: 340px; z-index: 5000; background: var(--gray-dark); border: 1px solid var(--border); border-bottom: none; transform: translateY(calc(100% - 48px)); transition: transform 0.3s cubic-bezier(0.22,1,0.36,1); }
+        .chat-panel.open { transform: translateY(0); }
+        .chat-header { height: 48px; display: flex; align-items: center; padding: 0 1rem; gap: 0.8rem; cursor: none; border-bottom: 1px solid var(--border); background: var(--gray-mid); }
+        .chat-header-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--white); flex: 1; }
+        .chat-body { height: 300px; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+        .chat-msg { padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.5; max-width: 85%; }
+        .chat-msg.me { background: var(--yellow); color: var(--black); align-self: flex-end; }
+        .chat-msg.them { background: rgba(255,255,255,0.06); color: var(--white); align-self: flex-start; border: 1px solid var(--border); }
+        .chat-msg-meta { font-size: 0.6rem; opacity: 0.5; margin-top: 0.2rem; }
+        .chat-footer { padding: 0.8rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
+        .chat-input { flex: 1; background: var(--black); border: 1px solid var(--border); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; padding: 0.5rem 0.7rem; outline: none; caret-color: var(--yellow); }
+        .chat-input:focus { border-color: var(--yellow); }
+        .chat-send { background: var(--yellow); color: var(--black); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; font-weight: 700; padding: 0.5rem 0.8rem; cursor: none; }
+
+        /* ── AUTH MODAL ── */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+        .modal-overlay.open { display: flex; }
+        .modal { background: var(--gray-dark); border: 1px solid var(--border); width: 100%; max-width: 440px; padding: 2.5rem; position: relative; max-height: 90vh; overflow-y: auto; }
+        .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--gray-muted); font-size: 1.2rem; cursor: none; font-family: 'IBM Plex Mono', monospace; transition: color 0.2s; line-height: 1; }
+        .modal-close:hover { color: var(--white); }
+        .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+        .modal-sub { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--gray-muted); letter-spacing: 0.1em; margin-bottom: 2rem; }
+        .modal-tabs { display: flex; gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 2rem; flex-wrap: wrap; }
+        .modal-tab { flex: 1; padding: 0.6rem; background: var(--black); font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-muted); border: none; cursor: none; transition: all 0.2s; text-align: center; min-width: 70px; }
+        .modal-tab.active { background: var(--yellow); color: var(--black); font-weight: 700; }
+        .modal-form { display: none; }
+        .modal-form.active { display: block; }
+        .m-group { margin-bottom: 1.2rem; }
+        .m-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.63rem; color: var(--gray-muted); letter-spacing: 0.2em; text-transform: uppercase; display: block; margin-bottom: 0.4rem; }
+        .m-input { width: 100%; background: var(--black); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; padding: 0.75rem 1rem; outline: none; transition: border-color 0.2s; caret-color: var(--yellow); }
+        .m-input:focus { border-color: var(--yellow); }
+        .m-btn { width: 100%; background: var(--yellow); color: var(--black); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.9rem; cursor: none; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 0.8rem; }
+        .m-btn:hover { background: var(--white); }
+        .m-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .m-error { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--red); margin-top: 0.6rem; text-align: center; }
+        .oauth-notice { background: rgba(245,230,66,0.06); border: 1px solid rgba(245,230,66,0.2); padding: 0.8rem 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--gray-muted); line-height: 1.6; margin-bottom: 1.2rem; }
+        .oauth-notice strong { color: var(--yellow); }
+
+        @media (max-width: 768px) {
+            .article-header { grid-template-columns: 1fr; }
+            .article-num { display: none; }
+            .article-actions { flex-direction: row; align-items: center; flex-wrap: wrap; }
+            .search-area { flex-direction: column; }
+            .filter-group { flex-wrap: wrap; }
+            body { cursor: auto; }
+            .cursor { display: none; }
+            .chat-panel { width: 100%; right: 0; }
+            .edit-fields { grid-template-columns: 1fr; }
+            header { padding: 0 5%; }
+        }
+    </style>
+</head>
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="toast" id="mzdev-toast"></div>
+
+<!-- ADMIN INDICATOR -->
+<div class="admin-indicator">// ADMIN-BEARBEITUNGSMODUS AKTIV — Klicke auf Felder um sie zu bearbeiten</div>
+
+<!-- ADMIN TOOLBAR -->
+<div class="admin-toolbar" id="adminToolbar">
+    <svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    ADMIN
+    <button class="admin-tool-btn" onclick="showNewArticleModal()">+ Artikel erstellen</button>
+    <button class="admin-tool-btn" onclick="saveAllEdits()">✓ Alles speichern</button>
+    <button class="admin-tool-btn" onclick="reorderArticles()">↕ Sortieren</button>
+    <button class="admin-tool-btn" style="background:rgba(255,95,87,0.2);color:var(--red);border:none;" onclick="exitAdminMode()">✕ Beenden</button>
+</div>
+
+<!-- ═══ AUTH MODAL ═══ -->
+<div class="modal-overlay" id="authModal">
+    <div class="modal">
+        <button class="modal-close" onclick="closeModal('authModal')">✕</button>
+        <div class="modal-title">KONTO</div>
+        <div class="modal-sub">// ANMELDEN</div>
+        <div class="modal-tabs" id="authTabs">
+            <button class="modal-tab active" onclick="switchTab('github')">GitHub</button>
+            <button class="modal-tab" onclick="switchTab('google')">Google</button>
+            <button class="modal-tab" onclick="switchTab('discord')">Discord</button>
+            <button class="modal-tab" onclick="switchTab('admin')">Admin</button>
+        </div>
+        <div class="modal-form active" id="form-github">
+            <div class="oauth-notice"><strong>GitHub Login</strong><br>Avatar, Name und Bio werden über die GitHub API geladen.</div>
+            <div class="m-group"><label class="m-label">GitHub Benutzername</label><input type="text" class="m-input" id="gh-username" placeholder="dein-github-username" onkeydown="if(event.key==='Enter')handleGithubLogin()"></div>
+            <button class="m-btn" id="gh-login-btn" onclick="handleGithubLogin()">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                Mit GitHub anmelden
+            </button>
+            <div class="m-error" id="github-error"></div>
+        </div>
+        <div class="modal-form" id="form-google">
+            <div class="oauth-notice"><strong>Google Login (Demo)</strong><br>Für echte Integration: Google Cloud Console OAuth einrichten.</div>
+            <div class="m-group"><label class="m-label">Name</label><input type="text" class="m-input" id="google-username" placeholder="Dein Name" onkeydown="if(event.key==='Enter')handleProviderLogin('google')"></div>
+            <div class="m-group"><label class="m-label">E-Mail</label><input type="email" class="m-input" id="google-email" placeholder="mail@gmail.com"></div>
+            <button class="m-btn" onclick="handleProviderLogin('google')" style="background:#4285F4;color:#fff;">Mit Google anmelden</button>
+            <div class="m-error" id="google-error"></div>
+        </div>
+        <div class="modal-form" id="form-discord">
+            <div class="oauth-notice"><strong>Discord Login (Demo)</strong><br>Für echte Integration: Discord Developer Portal → OAuth2.</div>
+            <div class="m-group"><label class="m-label">Discord-Nutzername</label><input type="text" class="m-input" id="discord-username" placeholder="user#1234" onkeydown="if(event.key==='Enter')handleProviderLogin('discord')"></div>
+            <button class="m-btn" onclick="handleProviderLogin('discord')" style="background:#5865F2;color:#fff;">Mit Discord anmelden</button>
+            <div class="m-error" id="discord-error"></div>
+        </div>
+        <div class="modal-form" id="form-admin">
+            <div class="m-group"><label class="m-label">Admin-Passwort</label><input type="password" class="m-input" id="admin-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')handleAdmin()"></div>
+            <button class="m-btn" onclick="handleAdmin()">Als Admin einloggen →</button>
+            <div class="m-error" id="admin-error"></div>
+        </div>
+    </div>
+</div>
+
+<!-- NEW ARTICLE MODAL (Admin) -->
+<div class="modal-overlay" id="newArticleModal">
+    <div class="modal" style="max-width:620px;">
+        <button class="modal-close" onclick="closeModal('newArticleModal')">✕</button>
+        <div class="modal-title">NEUER ARTIKEL</div>
+        <div class="modal-sub">// ARTIKEL ERSTELLEN</div>
+        <div class="m-group"><label class="m-label">Titel</label><input type="text" class="m-input" id="modal-art-title" placeholder="Artikel-Titel…"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.2rem;">
+            <div><label class="m-label">Kategorie</label><select class="m-input" id="modal-art-cat" style="cursor:pointer;"><option>Frontend</option><option>Backend</option><option>Security</option><option>Design</option><option>AI</option><option>DevOps</option></select></div>
+            <div><label class="m-label">Lesezeit</label><input type="text" class="m-input" id="modal-art-read" placeholder="5 min"></div>
+            <div><label class="m-label">Tags (komma)</label><input type="text" class="m-input" id="modal-art-tags" placeholder="React, Tips"></div>
+        </div>
+        <div class="m-group"><label class="m-label">Beschreibung</label><textarea class="m-input" id="modal-art-excerpt" style="min-height:60px;" placeholder="Kurze Beschreibung…"></textarea></div>
+        <div class="m-group"><label class="m-label">Inhalt (HTML)</label><textarea class="m-input" id="modal-art-content" style="min-height:200px;font-size:0.78rem;" placeholder="&lt;h2&gt;Überschrift&lt;/h2&gt;&lt;p&gt;Text…&lt;/p&gt;"></textarea></div>
+        <button class="m-btn" onclick="publishNewArticle()">Veröffentlichen →</button>
+    </div>
+</div>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+    <a href="index.html" class="logo">MZ<span>.</span>DEV</a>
+    <div class="header-rule"></div>
+    <nav>
+        <a href="index.html">Start</a>
+        <a href="articles.html" style="color:var(--yellow);">Artikel</a>
+        <a href="skills.html">Skills</a>
+        <a href="projects.html">Projekte</a>
+        <a href="search.html">Suche</a>
+        <a href="index.html#contact" class="nav-cta">Kontakt</a>
+        <div class="header-actions">
+            <a href="settings.html" class="icon-btn" title="Einstellungen" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </a>
+            <button class="icon-btn" id="chatToggleBtn" onclick="toggleChatPanel()" title="Nachrichten" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </button>
+            <div class="profile-wrap">
+                <button class="icon-btn" id="accountBtn" onclick="toggleProfileDropdown()" title="Konto">
+                    <svg viewBox="0 0 24 24" id="accountIcon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <img id="accountAvatar" src="" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;display:none;">
+                    <span class="online-dot" id="online-dot"></span>
+                </button>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="pd-user">
+                        <div class="pd-avatar" id="pd-avatar-wrap">
+                            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <div class="pd-info">
+                            <div class="pd-username" id="pd-username">Gast</div>
+                            <div class="pd-role" id="pd-role">// NICHT ANGEMELDET</div>
+                        </div>
+                    </div>
+                    <div class="pd-verified" id="pd-verified" style="display:none;"></div>
+                    <div id="pd-loggedout">
+                        <button class="pd-item" onclick="openModal('authModal');closeDropdown();">
+                            <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                            Anmelden
+                        </button>
+                    </div>
+                    <div id="pd-loggedin" style="display:none;">
+                        <a class="pd-item" href="profile.html">
+                            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            Mein Profil
+                        </a>
+                        <a class="pd-item" href="settings.html">
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg>
+                            Einstellungen
+                        </a>
+                        <button class="pd-item" id="pd-admin-btn" onclick="toggleAdminMode();closeDropdown();" style="display:none;">
+                            <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            Admin-Modus
+                        </button>
+                        <button class="pd-item" onclick="openChatPanel();closeDropdown();">
+                            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            Nachrichten
+                        </button>
+                        <button class="pd-item danger" onclick="handleLogout();closeDropdown();">
+                            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            Abmelden
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<!-- PAGE HERO -->
+<div class="page-hero">
+    <div class="page-tag">// 01 — Alle Artikel</div>
+    <h1 class="page-title">Blog &amp;<br>Artikel</h1>
+    <p class="page-sub">Meine Gedanken zu Webtechnologien, Security und Design — aus der Perspektive eines lernenden Hobby-Entwicklers.</p>
+</div>
+
+<!-- SEARCH & FILTER -->
+<div class="search-area">
+    <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" class="search-input" id="searchInput" placeholder="Artikel suchen…" oninput="filterArticles()">
+    </div>
+    <div class="filter-group" id="filterGroup">
+        <button class="filter-btn active" onclick="setFilter('all',this)">Alle</button>
+        <button class="filter-btn" onclick="setFilter('Frontend',this)">Frontend</button>
+        <button class="filter-btn" onclick="setFilter('Security',this)">Security</button>
+        <button class="filter-btn" onclick="setFilter('Backend',this)">Backend</button>
+        <button class="filter-btn" onclick="setFilter('Design',this)">Design</button>
+        <button class="filter-btn" onclick="setFilter('AI',this)">AI / ML</button>
+        <button class="filter-btn" onclick="setFilter('DevOps',this)">DevOps</button>
+    </div>
+    <select class="sort-select" id="sortSelect" onchange="filterArticles()">
+        <option value="newest">Neueste zuerst</option>
+        <option value="oldest">Älteste zuerst</option>
+        <option value="az">A → Z</option>
+        <option value="popular">Beliebteste</option>
+    </select>
+</div>
+
+<!-- ARTICLES -->
+<div class="articles-container">
+    <div class="articles-count" id="articlesCount">Zeige <span>0</span> Artikel</div>
+    <div id="articlesList"></div>
+    <div class="no-results" id="noResults" style="display:none;">
+        <div class="no-results-big">404</div>
+        Keine Artikel gefunden.
+    </div>
+</div>
+
+<div class="articles-footer">
+    © 2026 Michael Zellner · Hobby-Dev · <a href="index.html" style="color:var(--yellow);text-decoration:none;">← Zurück zur Hauptseite</a>
+</div>
+
+<!-- CHAT PANEL -->
+<div class="chat-panel" id="chatPanel">
+    <div class="chat-header" onclick="toggleChatPanel()">
+        <svg style="width:16px;height:16px;fill:none;stroke:var(--yellow);stroke-width:1.8;stroke-linecap:round;" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="chat-header-title">Nachrichten</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--gray-muted);margin-left:auto;">🔒 E2E</span>
+    </div>
+    <div class="chat-body" id="chatBody">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--gray-muted);text-align:center;padding:2rem;">Ende-zu-Ende verschlüsselt · Privat</div>
+    </div>
+    <div class="chat-footer">
+        <input class="chat-input" id="chatInput" placeholder="Nachricht…" onkeydown="if(event.key==='Enter')sendChatMessage()">
+        <button class="chat-send" onclick="sendChatMessage()">→</button>
+    </div>
+</div>
+
+<script src="../shared.js"></script>
+<script src="../api.js"></script>
+<script>
+// ═══════════════════════════════════════════
+// ARTICLES DATA
+// ═══════════════════════════════════════════
+const ARTICLES = [
+    {id:'owasp-top10',title:'OWASP Top 10 für Webentwickler: Praxis-Guide',category:'Security',date:'Feb 2026',ts:20260201,readtime:'12 min',excerpt:'Wie ich die häufigsten Web-Sicherheitslücken verstehe und in meinen Hobby-Projekten vermeide. Von SQL-Injection bis XSS — ein ehrlicher Bericht aus der Lernperspektive.',tags:['OWASP','Security','Webdev'],featured:true,content:`<h2>Was ist OWASP und warum sollte ich das lernen?</h2><p>Das Open Web Application Security Project (OWASP) ist eine Non-Profit-Organisation, die sich auf Web-Applikationssicherheit spezialisiert hat. Ihre bekannteste Ressource ist die <strong>OWASP Top 10</strong> — eine Liste der zehn kritischsten Sicherheitsrisiken für Webanwendungen.</p><h2>Die 10 häufigsten Sicherheitslücken</h2><h3>1. Broken Access Control</h3><p>Nutzer können auf Ressourcen zugreifen, auf die sie keinen Zugriff haben sollten.</p><pre><code>function requireRole(role) {
+  return (req, res, next) => {
+    if (!req.user || req.user.role !== role) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    next();
+  };
+}</code></pre><h3>2. SQL Injection</h3><pre><code>// ❌ FALSCH
+const query = \`SELECT * FROM users WHERE name = '\${userInput}'\`;
+// ✓ RICHTIG
+const query = 'SELECT * FROM users WHERE name = $1';
+const result = await db.query(query, [userInput]);</code></pre><h2>Fazit</h2><p>Security ist kein Add-on — es ist eine Denkweise von Anfang an.</p>`},
+    {id:'react-performance',title:'React Performance: Was ich bisher gelernt habe',category:'Frontend',date:'Jan 2026',ts:20260115,readtime:'8 min',excerpt:'useMemo, useCallback und Virtualisierung — meine Erfahrungen beim Optimieren meiner ersten größeren React-App.',tags:['React','JavaScript','Performance'],content:`<h2>Meine erste React-App war... langsam</h2><p>Als ich meine erste größere React-Anwendung gebaut habe, merkte ich schnell, dass sie mit wachsenden Daten immer träger wurde.</p><h3>useMemo — Berechnungen cachen</h3><pre><code>const expensiveResult = useMemo(() => {
+  return processLargeDataset(data);
+}, [data]);</code></pre><h3>useCallback — Funktionen stabil halten</h3><pre><code>const handleClick = useCallback((id) => {
+  setSelected(id);
+}, []);</code></pre><h2>Was ich gelernt habe</h2><p>Nicht überoptimieren! Erst messen (React DevTools Profiler), dann optimieren.</p>`},
+    {id:'css-design',title:'Modernes CSS: Grid, Custom Properties & Animationen',category:'Design',date:'Dez 2025',ts:20251210,readtime:'6 min',excerpt:'Wie ich durch Experimentieren mit CSS komplexe Layouts und Animationen gebaut habe — ganz ohne Framework.',tags:['CSS','Design','Animation'],content:`<h2>Warum CSS mich fasziniert</h2><p>CSS hat sich enorm weiterentwickelt. Was früher komplizierte JavaScript-Libraries erforderte, geht heute mit purem CSS.</p><h3>Custom Properties</h3><pre><code>:root {
+  --color-primary: #f5e642;
+  --color-bg: #000000;
+}
+.light-mode {
+  --color-bg: #ffffff;
+}</code></pre><h2>Fazit</h2><p>Modernes CSS ist mächtig genug für viele Design-Aufgaben ohne JavaScript.</p>`},
+    {id:'node-api',title:'Meine erste REST-API mit Node.js & Express',category:'Backend',date:'Nov 2025',ts:20251105,readtime:'10 min',excerpt:'Wie ich meine erste eigene Backend-API gebaut habe, welche Fehler ich gemacht habe und was ich daraus gelernt habe.',tags:['Node.js','Express','REST','API'],content:`<h2>Der Anfang: "Wie schwer kann das sein?"</h2><p>Ich hatte Frontend-Kenntnisse, aber das Backend war für mich eine Blackbox.</p><pre><code>const express = require('express');
+const app = express();
+app.use(express.json());
+app.get('/', (req, res) => {
+  res.json({ message: 'API läuft!' });
+});
+app.listen(3000);</code></pre><h2>Fehler #1: Keine Validierung</h2><p>Mein erster Fehler: Ich habe Usereingaben direkt in die Datenbank geschrieben.</p>`},
+    {id:'sql-basics',title:'PostgreSQL für Einsteiger: Was ich mir selbst beigebracht habe',category:'Backend',date:'Okt 2025',ts:20251020,readtime:'7 min',excerpt:'Von CREATE TABLE bis zu Joins — meine Notizen aus dem Selbststudium mit PostgreSQL.',tags:['PostgreSQL','SQL','Datenbank'],content:`<h2>Warum PostgreSQL?</h2><p>Ich habe mich für PostgreSQL entschieden, weil es Open Source ist, sehr leistungsfähig und weit verbreitet.</p><pre><code>CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+SELECT * FROM users WHERE created_at > NOW() - INTERVAL '7 days';</code></pre>`},
+    {id:'docker-basics',title:'Docker verstehen: Vom Chaos zum Container',category:'DevOps',date:'Sep 2025',ts:20250910,readtime:'5 min',excerpt:'Wie ich Docker endlich verstanden habe — Dockerfile schreiben, Images bauen und meine ersten Container laufen lassen.',tags:['Docker','DevOps','Container'],content:`<h2>"Works on my machine" — das Ende damit</h2><p>Docker löst genau dieses Problem: Anwendungen laufen in isolierten Containern, überall gleich.</p><pre><code>FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 3000
+CMD ["node", "server.js"]</code></pre>`},
+    {id:'ai-experiments',title:'Meine ersten KI-Experimente: Python & OpenAI API',category:'AI',date:'Aug 2025',ts:20250815,readtime:'9 min',excerpt:'Wie ich angefangen habe, mit KI-APIs zu experimentieren und kleine Projekte damit umzusetzen — als absoluter Einsteiger.',tags:['Python','AI','OpenAI','Experiment'],content:`<h2>Warum ich KI ausprobiert habe</h2><p>Ich wollte nicht einfach nur KI benutzen — ich wollte verstehen, wie man sie in eigene Projekte integriert.</p><pre><code>import openai
+client = openai.OpenAI()
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+        {"role": "system", "content": "Du bist ein hilfreicher Assistent."},
+        {"role": "user", "content": "Was ist eine REST API?"}
+    ]
+)
+print(response.choices[0].message.content)</code></pre>`},
+];
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let currentFilter='all', currentSearch='', currentSort='newest', openArticle=null;
+
+// Apply saved edits
+const savedEdits = MZDEV.editedArticles;
+Object.keys(savedEdits).forEach(id=>{
+    const a=ARTICLES.find(a=>a.id===id);
+    if(a&&savedEdits[id]){
+        if(savedEdits[id].content)a.content=savedEdits[id].content;
+        if(savedEdits[id].title)a.title=savedEdits[id].title;
+        if(savedEdits[id].excerpt)a.excerpt=savedEdits[id].excerpt;
+        if(savedEdits[id].category)a.category=savedEdits[id].category;
+        if(savedEdits[id].readtime)a.readtime=savedEdits[id].readtime;
+    }
+});
+
+// Load extra articles from localStorage
+const storedExtras=MZDEV.storedArticles;
+storedExtras.forEach(a=>{if(!ARTICLES.find(x=>x.id===a.id))ARTICLES.push(a);});
+
+// ═══════════════════════════════════════════
+// CURSOR
+// ═══════════════════════════════════════════
+const cursor=document.getElementById('cursor');
+let mouseX=0,mouseY=0,curX=0,curY=0;
+document.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY;});
+function animateCursor(){curX+=(mouseX-curX)*0.15;curY+=(mouseY-curY)*0.15;if(cursor){cursor.style.left=curX+'px';cursor.style.top=curY+'px';}requestAnimationFrame(animateCursor);}
+animateCursor();
+document.addEventListener('mouseover',e=>{if(e.target.matches('a,button,input,select,.article-item,.article-header,.reaction-btn,.expand-btn'))cursor&&cursor.classList.add('hover');else cursor&&cursor.classList.remove('hover');});
+
+// ═══════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+function switchTab(tab){
+    ['github','google','discord','admin'].forEach((t,i)=>{
+        document.querySelector(`#authTabs button:nth-child(${i+1})`).classList.toggle('active',t===tab);
+        document.getElementById('form-'+t).classList.toggle('active',t===tab);
+    });
+}
+
+// ═══════════════════════════════════════════
+// AUTH (via API backend)
+// ═══════════════════════════════════════════
+function handleGithubLogin() { API.oauthLogin('github'); }
+function handleProviderLogin(provider) { API.oauthLogin(provider); }
+async function handleAdmin() {
+    const pw = document.getElementById('admin-password').value;
+    const errEl = document.getElementById('admin-error');
+    errEl.textContent = '';
+    if (!pw) { errEl.textContent = '// Bitte Passwort eingeben'; return; }
+    try {
+        await API.adminLogin(pw);
+        closeModal('authModal'); updateUI();
+        document.body.classList.add('admin-mode');
+        MZDEV.showToast('Admin-Modus aktiv', 'success'); filterArticles();
+    } catch (e) { errEl.textContent = '// ' + e.message; }
+}
+    async function handleLogout() {
+    await API.logout();
+    document.body.classList.remove('admin-mode');
+    updateUI(); MZDEV.showToast('Abgemeldet'); filterArticles();
+}
+// ═══════════════════════════════════════════
+// UI UPDATE
+// ═══════════════════════════════════════════
+function updateUI(){
+    const user=MZDEV.currentUser,isAdmin=MZDEV.isAdmin;
+    document.getElementById('online-dot').classList.toggle('visible',!!user);
+    document.getElementById('pd-username').textContent=user?(user.displayName||user.username):'Gast';
+    document.getElementById('pd-role').textContent=user?(isAdmin?'// ADMIN':`// ${(user.provider||'').toUpperCase()} · ${user.username}`):'// NICHT ANGEMELDET';
+    document.getElementById('pd-loggedin').style.display=user?'block':'none';
+    document.getElementById('pd-loggedout').style.display=user?'none':'block';
+    const chatBtn=document.getElementById('chatToggleBtn');
+    if(chatBtn)chatBtn.style.display=user?'flex':'none';
+    const admBtn=document.getElementById('pd-admin-btn');
+    if(admBtn)admBtn.style.display=isAdmin?'flex':'none';
+    if(user){
+        const aI=document.getElementById('accountIcon'),aA=document.getElementById('accountAvatar');
+        if(user.avatar){aI.style.display='none';aA.src=user.avatar;aA.style.display='block';document.getElementById('pd-avatar-wrap').innerHTML=`<img src="${user.avatar}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`;}
+        else{aI.style.display='';aA.style.display='none';}
+        const svcs=user.connectedServices||[];
+        const vEl=document.getElementById('pd-verified');
+        if(svcs.length>0){vEl.style.display='flex';vEl.innerHTML=svcs.map(s=>`<span class="verified-badge">${s.toUpperCase()} Verified ✓</span>`).join('');}
+        else vEl.style.display='none';
+        if(isAdmin)document.body.classList.add('admin-mode');
+    } else {
+        document.getElementById('accountIcon').style.display='';
+        document.getElementById('accountAvatar').style.display='none';
+        document.getElementById('pd-verified').style.display='none';
+    }
+}
+
+// ═══════════════════════════════════════════
+// DROPDOWN
+// ═══════════════════════════════════════════
+function toggleProfileDropdown(){document.getElementById('profileDropdown').classList.toggle('open');}
+function closeDropdown(){document.getElementById('profileDropdown').classList.remove('open');}
+document.addEventListener('click',e=>{const w=document.querySelector('.profile-wrap');if(w&&!w.contains(e.target))closeDropdown();});
+
+// ═══════════════════════════════════════════
+// ADMIN MODE
+// ═══════════════════════════════════════════
+function toggleAdminMode(){
+    if(MZDEV.isAdmin){document.body.classList.toggle('admin-mode');filterArticles();}
+}
+function exitAdminMode(){document.body.classList.remove('admin-mode');MZDEV.showToast('Bearbeitungsmodus beendet');}
+function showNewArticleModal(){openModal('newArticleModal');}
+function reorderArticles(){MZDEV.showToast('Artikel-Reihenfolge: Nutze die Sortierfunktion oben');}
+function saveAllEdits(){
+    ARTICLES.forEach(a=>{
+        const ta=document.getElementById('edit-content-'+a.id);
+        if(ta&&ta.value)saveArticleEdit(a.id);
+    });
+    MZDEV.showToast('Alle Änderungen gespeichert!','success');
+}
+
+// ═══════════════════════════════════════════
+// FILTER & SEARCH
+// ═══════════════════════════════════════════
+function setFilter(f,btn){
+    currentFilter=f;
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    filterArticles();
+}
+function filterArticles(){
+    currentSearch=document.getElementById('searchInput').value.toLowerCase().trim();
+    currentSort=document.getElementById('sortSelect').value;
+    const reactions=MZDEV.reactions;
+    let filtered=ARTICLES.filter(a=>{
+        const mf=currentFilter==='all'||a.category.toLowerCase().includes(currentFilter.toLowerCase())||a.tags.some(t=>t.toLowerCase().includes(currentFilter.toLowerCase()));
+        const ms=!currentSearch||a.title.toLowerCase().includes(currentSearch)||a.excerpt.toLowerCase().includes(currentSearch)||a.tags.some(t=>t.toLowerCase().includes(currentSearch))||a.category.toLowerCase().includes(currentSearch);
+        return mf&&ms;
+    });
+    filtered.sort((a,b)=>{
+        if(currentSort==='newest')return b.ts-a.ts;
+        if(currentSort==='oldest')return a.ts-b.ts;
+        if(currentSort==='az')return a.title.localeCompare(b.title);
+        if(currentSort==='popular')return((reactions[b.id]?.likes||0)-(reactions[a.id]?.likes||0));
+        return 0;
+    });
+    renderArticles(filtered);
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function renderArticles(articles){
+    const list=document.getElementById('articlesList');
+    const noRes=document.getElementById('noResults');
+    const count=document.getElementById('articlesCount');
+    const reactions=MZDEV.reactions;
+    const user=MZDEV.currentUser;
+    const isAdmin=MZDEV.isAdmin;
+
+    if(!articles.length){list.innerHTML='';noRes.style.display='block';count.innerHTML='Zeige <span>0</span> Artikel';return;}
+    noRes.style.display='none';
+    count.innerHTML=`Zeige <span>${articles.length}</span> von ${ARTICLES.length} Artikel${articles.length!==1?'n':''}`;
+
+    list.innerHTML=articles.map((a,i)=>{
+        const r=reactions[a.id]||{likes:0,dislikes:0,userLiked:false,userDisliked:false};
+        const comments=MZDEV.comments[a.id]||[];
+        const isOpen=openArticle===a.id;
+        const editedMeta=savedEdits[a.id];
+
+        return `
+        <div class="article-item" id="article-${a.id}">
+            <div class="article-header" onclick="toggleArticle('${a.id}')">
+                <div class="article-num">0${i+1}</div>
+                <div>
+                    <div class="article-meta-row">
+                        <span class="article-cat" id="cat-${a.id}">${a.category}</span>
+                        <span class="article-date">${a.date}</span>
+                        <span class="article-readtime">· <span id="read-${a.id}">${a.readtime}</span> Lesezeit</span>
+                        ${a.featured?'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:0.6rem;background:var(--yellow);color:var(--black);padding:0.1rem 0.5rem;font-weight:700;letter-spacing:0.1em;">FEATURED</span>':''}
+                        ${editedMeta?'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:0.6rem;background:rgba(40,202,66,0.15);border:1px solid rgba(40,202,66,0.3);color:var(--green);padding:0.1rem 0.4rem;">BEARBEITET</span>':''}
+                    </div>
+                    <h2 class="article-title" id="title-${a.id}">${a.title}</h2>
+                    <p class="article-excerpt" id="excerpt-${a.id}">${a.excerpt}</p>
+                    <div class="article-tags">${a.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+                    <div class="article-admin-actions" style="margin-top:0.8rem;">
+                        <button class="a-admin-btn edit" onclick="event.stopPropagation();openBodyForEdit('${a.id}')">✎ Bearbeiten</button>
+                        <button class="a-admin-btn del" onclick="event.stopPropagation();deleteArticle('${a.id}')">✕ Löschen</button>
+                        <button class="a-admin-btn edit" onclick="event.stopPropagation();toggleFeatured('${a.id}')">★ Featured</button>
+                    </div>
+                </div>
+                <div class="article-actions" onclick="event.stopPropagation()">
+                    <button class="expand-btn" onclick="toggleArticle('${a.id}')">${isOpen?'Schließen ↑':'Lesen →'}</button>
+                    <div class="reaction-row">
+                        <button class="reaction-btn ${r.userLiked?'liked':''}" onclick="react('${a.id}','like')">
+                            <svg viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                            ${r.likes}
+                        </button>
+                        <button class="reaction-btn ${r.userDisliked?'disliked':''}" onclick="react('${a.id}','dislike')">
+                            <svg viewBox="0 0 24 24"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>
+                            ${r.dislikes}
+                        </button>
+                    </div>
+                    <div class="download-btn" onclick="toggleDownloadMenu('${a.id}')">
+                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Laden
+                        <div class="download-menu" id="dl-menu-${a.id}">
+                            <button class="dl-item" onclick="downloadArticle('${a.id}','txt')">Als TXT</button>
+                            <button class="dl-item" onclick="downloadArticle('${a.id}','md')">Als Markdown</button>
+                            <button class="dl-item" onclick="downloadArticle('${a.id}','html')">Als HTML</button>
+                            <button class="dl-item" onclick="downloadArticle('${a.id}','pdf')">Als PDF</button>
+                        </div>
+                    </div>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--gray-muted);">${comments.length} Kommentar${comments.length!==1?'e':''}</span>
+                </div>
+            </div>
+
+            <div class="article-body ${isOpen?'open':''}" id="body-${a.id}">
+                <div class="article-content" id="content-${a.id}">${a.content}</div>
+
+                <!-- ADMIN EDIT PANEL -->
+                <div class="article-edit-panel" id="edit-panel-${a.id}">
+                    <div class="edit-panel-title">// ARTIKEL BEARBEITEN — ${a.id}</div>
+                    <div class="edit-fields">
+                        <div class="edit-field"><label>Titel</label><input id="edit-title-${a.id}" value="${escHtml(a.title)}"></div>
+                        <div class="edit-field"><label>Kategorie</label>
+                            <select id="edit-cat-${a.id}">
+                                ${['Frontend','Backend','Security','Design','AI','DevOps'].map(c=>`<option ${a.category===c?'selected':''}>${c}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="edit-field"><label>Lesezeit</label><input id="edit-read-${a.id}" value="${escHtml(a.readtime)}"></div>
+                    </div>
+                    <div class="edit-field" style="margin-bottom:1rem;"><label style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--gray-muted);letter-spacing:0.15em;display:block;margin-bottom:0.3rem;">Beschreibung</label><input class="edit-content-area" id="edit-excerpt-${a.id}" value="${escHtml(a.excerpt)}" style="min-height:auto;height:60px;resize:none;width:100%;"></div>
+                    <textarea class="edit-content-area" id="edit-content-${a.id}" spellcheck="false">${escHtml(a.content)}</textarea>
+                    <div class="edit-actions">
+                        <button class="edit-save-btn" onclick="saveArticleEdit('${a.id}')">Speichern ✓</button>
+                        <button class="edit-discard-btn" onclick="discardEdit('${a.id}')">Verwerfen</button>
+                        <span class="edit-saved-msg" id="saved-msg-${a.id}">// Gespeichert!</span>
+                    </div>
+                </div>
+
+                <!-- COMMENTS -->
+                <div class="comments-section">
+                    <div class="comments-title">// ${comments.length} Kommentar${comments.length!==1?'e':''}</div>
+                    ${!user?`<div class="comment-login-hint"><a href="javascript:openModal('authModal')">Anmelden</a>, um zu kommentieren.</div>`:''}
+                    ${user?`<div class="comment-form">
+                        <input class="comment-input" id="comment-input-${a.id}" placeholder="Dein Kommentar…" onkeydown="if(event.key==='Enter')submitComment('${a.id}')">
+                        <button class="comment-submit" onclick="submitComment('${a.id}')">Senden</button>
+                    </div>`:''}
+                    <div id="comments-list-${a.id}">${renderComments(a.id)}</div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function escHtml(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function renderComments(articleId){
+    const comments=MZDEV.comments[articleId]||[];
+    const isAdmin=MZDEV.isAdmin;
+    if(!comments.length)return`<div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--gray-muted);padding:1rem 0;">Noch keine Kommentare.</div>`;
+    return comments.map((c,i)=>`
+        <div class="comment">
+            <div class="comment-avatar ${c.isAdmin?'admin-av':''}">
+                ${c.avatar?`<img src="${c.avatar}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`:`<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`}
+            </div>
+            <div class="comment-body">
+                <div class="comment-name">
+                    ${c.username}
+                    ${c.isAdmin?'<span class="admin-badge">ADMIN</span>':''}
+                    ${c.provider?`<span style="font-family:'IBM Plex Mono',monospace;font-size:0.55rem;background:rgba(40,202,66,0.15);border:1px solid rgba(40,202,66,0.3);color:var(--green);padding:0.1rem 0.35rem;">${c.provider.toUpperCase()} ✓</span>`:''}
+                    <span class="comment-time">${c.time}</span>
+                </div>
+                <div class="comment-text">${escHtml(c.text)}</div>
+                <div class="comment-actions">
+                    <button class="comment-del-btn" onclick="deleteComment('${articleId}',${i})">✕ Löschen</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ═══════════════════════════════════════════
+// ARTICLE TOGGLE
+// ═══════════════════════════════════════════
+function toggleArticle(id){
+    const body=document.getElementById('body-'+id);if(!body)return;
+    const isOpen=body.classList.contains('open');
+    document.querySelectorAll('.article-body').forEach(b=>b.classList.remove('open'));
+    openArticle=null;
+    if(!isOpen){body.classList.add('open');openArticle=id;}
+    ARTICLES.forEach(a=>{const btn=document.querySelector(`#article-${a.id} .expand-btn`);if(btn)btn.textContent=(openArticle===a.id)?'Schließen ↑':'Lesen →';});
+}
+function openBodyForEdit(id){
+    if(!document.getElementById('body-'+id).classList.contains('open'))toggleArticle(id);
+    setTimeout(()=>document.getElementById('edit-panel-'+id).scrollIntoView({behavior:'smooth'}),300);
+}
+
+// ═══════════════════════════════════════════
+// REACTIONS
+// ═══════════════════════════════════════════
+function react(articleId,type){
+    const reactions=MZDEV.reactions;
+    if(!reactions[articleId])reactions[articleId]={likes:0,dislikes:0,userLiked:false,userDisliked:false};
+    const r=reactions[articleId];
+    if(type==='like'){
+        if(r.userLiked){r.likes--;r.userLiked=false;}
+        else{r.likes++;r.userLiked=true;if(r.userDisliked){r.dislikes--;r.userDisliked=false;}}
+    } else {
+        if(r.userDisliked){r.dislikes--;r.userDisliked=false;}
+        else{r.dislikes++;r.userDisliked=true;if(r.userLiked){r.likes--;r.userLiked=false;}}
+    }
+    MZDEV.saveReactions(reactions);filterArticles();
+}
+
+// ═══════════════════════════════════════════
+// COMMENTS
+// ═══════════════════════════════════════════
+function submitComment(articleId){
+    const input=document.getElementById('comment-input-'+articleId);
+    const text=input.value.trim();if(!text)return;
+    const user=MZDEV.currentUser;
+    if(!user){MZDEV.showToast('Bitte erst anmelden','error');return;}
+    const filtered=MZDEV.filterContent(text);
+    if(!filtered){MZDEV.showToast('Kommentar enthält unzulässige Inhalte','error');return;}
+    const comments=MZDEV.comments;
+    if(!comments[articleId])comments[articleId]=[];
+    comments[articleId].push({
+        username:user.displayName||user.username,text,
+        time:new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+        isAdmin:MZDEV.isAdmin||false,
+        avatar:user.avatar||null,
+        provider:user.provider||null
+    });
+    MZDEV.saveComments(comments);
+    input.value='';
+    document.getElementById('comments-list-'+articleId).innerHTML=renderComments(articleId);
+    MZDEV.showToast('Kommentar veröffentlicht','success');
+}
+function deleteComment(articleId,index){
+    const comments=MZDEV.comments;
+    if(!comments[articleId])return;
+    comments[articleId].splice(index,1);
+    MZDEV.saveComments(comments);
+    document.getElementById('comments-list-'+articleId).innerHTML=renderComments(articleId);
+    MZDEV.showToast('Kommentar gelöscht');
+}
+
+// ═══════════════════════════════════════════
+// ADMIN EDITS
+// ═══════════════════════════════════════════
+function saveArticleEdit(articleId){
+    const ta=document.getElementById('edit-content-'+articleId);
+    const titleIn=document.getElementById('edit-title-'+articleId);
+    const catIn=document.getElementById('edit-cat-'+articleId);
+    const readIn=document.getElementById('edit-read-'+articleId);
+    const excIn=document.getElementById('edit-excerpt-'+articleId);
+    if(!ta)return;
+    const rawHtml=ta.value.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+    const editData={content:rawHtml,title:titleIn?titleIn.value:'',category:catIn?catIn.value:'',readtime:readIn?readIn.value:'',excerpt:excIn?excIn.value:'',savedAt:new Date().toISOString()};
+    const edits=MZDEV.editedArticles;edits[articleId]=editData;MZDEV.saveEditedArticles(edits);
+    const article=ARTICLES.find(a=>a.id===articleId);
+    if(article){article.content=rawHtml;if(editData.title)article.title=editData.title;if(editData.category)article.category=editData.category;if(editData.readtime)article.readtime=editData.readtime;if(editData.excerpt)article.excerpt=editData.excerpt;}
+    const contentEl=document.getElementById('content-'+articleId);
+    if(contentEl)contentEl.innerHTML=rawHtml;
+    // Update visible meta
+    const titleEl=document.getElementById('title-'+articleId);if(titleEl&&editData.title)titleEl.textContent=editData.title;
+    const catEl=document.getElementById('cat-'+articleId);if(catEl&&editData.category)catEl.textContent=editData.category;
+    const readEl=document.getElementById('read-'+articleId);if(readEl&&editData.readtime)readEl.textContent=editData.readtime;
+    const msg=document.getElementById('saved-msg-'+articleId);
+    if(msg){msg.classList.add('show');setTimeout(()=>msg.classList.remove('show'),2500);}
+    MZDEV.showToast('Artikel gespeichert!','success');
+}
+function discardEdit(articleId){
+    const article=ARTICLES.find(a=>a.id===articleId);if(!article)return;
+    const ta=document.getElementById('edit-content-'+articleId);
+    if(ta)ta.value=escHtml(article.content);
+    MZDEV.showToast('Änderungen verworfen');
+}
+function deleteArticle(id){
+    if(!confirm('Artikel wirklich löschen?'))return;
+    const idx=ARTICLES.findIndex(a=>a.id===id);
+    if(idx>-1){ARTICLES.splice(idx,1);const extras=MZDEV.storedArticles.filter(a=>a.id!==id);MZDEV.saveArticles(extras);}
+    filterArticles();MZDEV.showToast('Artikel gelöscht');
+}
+function toggleFeatured(id){
+    const a=ARTICLES.find(x=>x.id===id);if(a){a.featured=!a.featured;filterArticles();MZDEV.showToast(a.featured?'Als Featured markiert':'Featured entfernt');}
+}
+function publishNewArticle(){
+    const title=document.getElementById('modal-art-title').value.trim();
+    const cat=document.getElementById('modal-art-cat').value;
+    const read=document.getElementById('modal-art-read').value.trim()||'5 min';
+    const tags=document.getElementById('modal-art-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+    const excerpt=document.getElementById('modal-art-excerpt').value.trim();
+    const content=document.getElementById('modal-art-content').value.trim();
+    if(!title||!excerpt){MZDEV.showToast('Pflichtfelder fehlen','error');return;}
+    const id='article-'+Date.now();
+    const now=new Date();
+    const months=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+    const article={id,title,category:cat,date:months[now.getMonth()]+' '+now.getFullYear(),ts:parseInt(now.toISOString().replace(/-/g,'').slice(0,8)),readtime:read,excerpt,tags,content,featured:false};
+    ARTICLES.push(article);
+    const extras=MZDEV.storedArticles;extras.push(article);MZDEV.saveArticles(extras);
+    closeModal('newArticleModal');filterArticles();
+    ['modal-art-title','modal-art-read','modal-art-tags','modal-art-excerpt','modal-art-content'].forEach(id=>document.getElementById(id).value='');
+    MZDEV.showToast(`Artikel "${title}" veröffentlicht!`,'success');
+}
+
+// ═══════════════════════════════════════════
+// DOWNLOAD
+// ═══════════════════════════════════════════
+function toggleDownloadMenu(id){
+    document.querySelectorAll('.download-menu').forEach(m=>{if(m.id!=='dl-menu-'+id)m.classList.remove('open');});
+    document.getElementById('dl-menu-'+id).classList.toggle('open');
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.download-btn'))document.querySelectorAll('.download-menu').forEach(m=>m.classList.remove('open'));});
+
+function stripHtml(html){return html.replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/\s+/g,' ').trim();}
+
+function downloadArticle(id,format){
+    const a=ARTICLES.find(x=>x.id===id);if(!a)return;
+    let content='',mimeType='text/plain',ext=format;
+    if(format==='txt'){
+        content=`${a.title}\n${'='.repeat(a.title.length)}\n\nKategorie: ${a.category}\nDatum: ${a.date}\nLesezeit: ${a.readtime}\nTags: ${a.tags.join(', ')}\n\n${stripHtml(a.content)}`;
+        mimeType='text/plain';
+    } else if(format==='md'){
+        content=`# ${a.title}\n\n> **Kategorie:** ${a.category} | **Datum:** ${a.date} | **Lesezeit:** ${a.readtime}\n> **Tags:** ${a.tags.join(', ')}\n\n---\n\n${stripHtml(a.content)}`;
+        mimeType='text/markdown';ext='md';
+    } else if(format==='html'){
+        content=`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>${a.title}</title><style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:1rem;line-height:1.7;}h1{font-size:2rem;}pre{background:#f4f4f4;padding:1rem;overflow-x:auto;}code{background:#f4f4f4;padding:0.1rem 0.3rem;}</style></head><body><h1>${a.title}</h1><p><strong>${a.category}</strong> · ${a.date} · ${a.readtime}</p><hr>${a.content}</body></html>`;
+        mimeType='text/html';
+    } else if(format==='pdf'){
+        // Print-based PDF
+        const w=window.open('','_blank');
+        w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${a.title}</title><style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:1rem;line-height:1.7;}h1{font-size:2rem;}pre{background:#f4f4f4;padding:1rem;overflow-x:auto;white-space:pre-wrap;}code{background:#f4f4f4;padding:0.1rem 0.3rem;}</style></head><body><h1>${a.title}</h1><p><strong>${a.category}</strong> · ${a.date} · ${a.readtime} · Tags: ${a.tags.join(', ')}</p><hr>${a.content}</body></html>`);
+        w.document.close();w.onload=()=>{w.print();};
+        MZDEV.showToast('PDF-Druckdialog geöffnet','success');return;
+    }
+    const blob=new Blob([content],{type:mimeType});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download=`${id}.${ext}`;link.click();
+    URL.revokeObjectURL(url);
+    MZDEV.showToast(`Artikel als ${format.toUpperCase()} heruntergeladen`,'success');
+}
+
+// ═══════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════
+function toggleChatPanel(){document.getElementById('chatPanel').classList.toggle('open');}
+function openChatPanel(){document.getElementById('chatPanel').classList.add('open');}
+function sendChatMessage(){
+    const user=MZDEV.currentUser;if(!user){MZDEV.showToast('Bitte erst anmelden','error');return;}
+    const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;
+    const filtered=MZDEV.filterContent(msg);if(!filtered){MZDEV.showToast('Nachricht enthält unzulässige Inhalte','error');return;}
+    const chatBody=document.getElementById('chatBody');
+    const el=document.createElement('div');el.className='chat-msg me';
+    el.innerHTML=`${msg}<div class="chat-msg-meta">${user.username} · jetzt</div>`;
+    chatBody.appendChild(el);chatBody.scrollTop=chatBody.scrollHeight;
+    const msgs=MZDEV.messages;if(!msgs[user.username])msgs[user.username]=[];
+    msgs[user.username].push({from:user.username,text:MZDEV.xorEncrypt(msg),ts:Date.now()});
+    MZDEV.saveMessages(msgs);input.value='';
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+MZDEV.applyTheme();
+
+// Handle OAuth callback if returning from provider
+(async function() {
+    const handled = await API.handleAuthCallback();
+    if (handled) { updateUI(); filterArticles(); }
+    else { updateUI(); filterArticles(); }
+})();
+// Deep link
+const params=new URLSearchParams(window.location.search);
+const articleId=params.get('article');
+if(articleId){
+    setTimeout(()=>{
+        const el=document.getElementById('article-'+articleId);
+        if(el){el.scrollIntoView({behavior:'smooth',block:'start'});toggleArticle(articleId);}
+    },400);
+}
+// Open auth if requested
+if(sessionStorage.getItem('openAuth')==='1'){sessionStorage.removeItem('openAuth');openModal('authModal');}
+</script>
+</body>
+</html>

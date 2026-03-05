@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <title>Skills | Michael Zellner Dev Blog</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --black: #000000; --white: #ffffff; --yellow: #f5e642;
+            --gray-dark: #111111; --gray-mid: #222222; --gray-light: #333333;
+            --gray-muted: #888888; --border: rgba(255,255,255,0.1);
+            --red: #ff5f57; --green: #28ca42;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'IBM Plex Sans', sans-serif; background: var(--black); color: var(--white); overflow-x: hidden; line-height: 1.6; cursor: none; }
+        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 9998; opacity: 0.5; }
+        .cursor { position: fixed; width: 12px; height: 12px; background: var(--yellow); border-radius: 50%; pointer-events: none; z-index: 99999; transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s; mix-blend-mode: difference; }
+        .cursor.hover { width: 40px; height: 40px; }
+        .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--gray-dark); border: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--white); padding: 0.8rem 1.5rem; z-index: 99998; opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.success { border-color: var(--green); color: var(--green); }
+        .toast.error { border-color: var(--red); color: var(--red); }
+        header { position: sticky; top: 0; z-index: 1000; background: var(--black); border-bottom: 1px solid var(--border); padding: 0 5%; display: flex; align-items: center; height: 64px; }
+        .logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.1em; color: var(--white); text-decoration: none; flex-shrink: 0; }
+        .logo span { color: var(--yellow); }
+        .header-rule { flex: 1; height: 1px; background: var(--border); margin: 0 2rem; }
+        nav { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+        nav a { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--gray-muted); text-decoration: none; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.2s; white-space: nowrap; }
+        nav a:hover { color: var(--yellow); }
+        nav a.active { color: var(--yellow); }
+        nav a.nav-cta { background: var(--yellow); color: var(--black); padding: 0.4rem 0.9rem; font-weight: 700; }
+        nav a.nav-cta:hover { background: var(--white); }
+        .header-actions { display: flex; align-items: center; gap: 0.4rem; margin-left: 0.8rem; flex-shrink: 0; }
+        .icon-btn { width: 36px; height: 36px; background: transparent; border: 1px solid var(--border); color: var(--gray-muted); display: flex; align-items: center; justify-content: center; cursor: none; transition: all 0.2s; position: relative; flex-shrink: 0; padding: 0; }
+        .icon-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+        .icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .online-dot { position: absolute; bottom: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--green); border: 1px solid var(--black); display: none; }
+        .online-dot.visible { display: block; }
+        .profile-wrap { position: relative; }
+        .profile-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--gray-dark); border: 1px solid var(--border); min-width: 220px; z-index: 2000; display: none; box-shadow: 0 8px 32px rgba(0,0,0,0.8); }
+        .profile-dropdown.open { display: block; }
+        .pd-user { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.8rem; align-items: center; }
+        .pd-avatar { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--gray-mid); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .pd-avatar svg { width: 18px; height: 18px; fill: none; stroke: var(--gray-muted); stroke-width: 1.8; }
+        .pd-info { flex: 1; min-width: 0; }
+        .pd-username { font-family: 'Bebas Neue', sans-serif; font-size: 1.05rem; color: var(--white); letter-spacing: 0.05em; }
+        .pd-role { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--yellow); letter-spacing: 0.1em; }
+        .verified-badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; background: rgba(40,202,66,0.15); border: 1px solid rgba(40,202,66,0.3); color: var(--green); padding: 0.15rem 0.45rem; letter-spacing: 0.08em; }
+        .pd-verified { display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0.5rem 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .pd-item { padding: 0.75rem 1.2rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--gray-muted); cursor: none; transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; display: flex; align-items: center; gap: 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.04); text-decoration: none; }
+        .pd-item:hover { color: var(--white); background: rgba(255,255,255,0.04); }
+        .pd-item.danger:hover { color: var(--red); }
+        .pd-item svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+        .modal-overlay.open { display: flex; }
+        .modal { background: var(--gray-dark); border: 1px solid var(--border); width: 100%; max-width: 440px; padding: 2.5rem; position: relative; max-height: 90vh; overflow-y: auto; }
+        .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--gray-muted); font-size: 1.2rem; cursor: none; font-family: 'IBM Plex Mono', monospace; }
+        .modal-close:hover { color: var(--white); }
+        .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+        .modal-sub { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--gray-muted); letter-spacing: 0.1em; margin-bottom: 2rem; }
+        .modal-tabs { display: flex; gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 2rem; flex-wrap: wrap; }
+        .modal-tab { flex: 1; padding: 0.6rem; background: var(--black); font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-muted); border: none; cursor: none; transition: all 0.2s; text-align: center; min-width: 70px; }
+        .modal-tab.active { background: var(--yellow); color: var(--black); font-weight: 700; }
+        .modal-form { display: none; }
+        .modal-form.active { display: block; }
+        .m-group { margin-bottom: 1.2rem; }
+        .m-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.63rem; color: var(--gray-muted); letter-spacing: 0.2em; text-transform: uppercase; display: block; margin-bottom: 0.4rem; }
+        .m-input { width: 100%; background: var(--black); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; padding: 0.75rem 1rem; outline: none; transition: border-color 0.2s; caret-color: var(--yellow); }
+        .m-input:focus { border-color: var(--yellow); }
+        .m-btn { width: 100%; background: var(--yellow); color: var(--black); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.9rem; cursor: none; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 0.8rem; }
+        .m-btn:hover { background: var(--white); }
+        .m-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .m-error { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--red); margin-top: 0.6rem; text-align: center; }
+        .oauth-notice { background: rgba(245,230,66,0.06); border: 1px solid rgba(245,230,66,0.2); padding: 0.8rem 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--gray-muted); line-height: 1.6; margin-bottom: 1.2rem; }
+        .oauth-notice strong { color: var(--yellow); }
+        /* PAGE HERO */
+        .page-hero { padding: 5rem 5% 3rem; border-bottom: 1px solid var(--border); }
+        .page-tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--yellow); letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 1rem; }
+        .page-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(3rem, 6vw, 5rem); line-height: 1; letter-spacing: 0.02em; margin-bottom: 1rem; }
+        .page-sub { color: var(--gray-muted); font-size: 1rem; max-width: 600px; line-height: 1.7; }
+        /* SKILLS */
+        .skills-container { padding: 3rem 5%; max-width: 1100px; }
+        .skills-filter { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+        .filter-btn { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.5rem 1rem; border: 1px solid var(--border); background: transparent; color: var(--gray-muted); cursor: pointer; transition: all 0.2s; }
+        .filter-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+        .filter-btn.active { background: var(--yellow); color: var(--black); border-color: var(--yellow); font-weight: 700; }
+        .skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        .skill-card { background: var(--gray-dark); border: 1px solid var(--border); padding: 2rem; transition: all 0.3s; position: relative; overflow: hidden; }
+        .skill-card:hover { border-color: var(--yellow); transform: translateY(-2px); }
+        .skill-card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--yellow); opacity: 0; transition: opacity 0.3s; }
+        .skill-card:hover::before { opacity: 1; }
+        .skill-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.2rem; }
+        .skill-icon { width: 48px; height: 48px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--black); font-size: 1.4rem; }
+        .skill-title-wrap { flex: 1; }
+        .skill-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.03em; color: var(--white); line-height: 1.2; }
+        .skill-category { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--yellow); letter-spacing: 0.2em; text-transform: uppercase; margin-top: 0.2rem; }
+        .skill-desc { font-size: 0.85rem; color: var(--gray-muted); line-height: 1.6; margin-bottom: 1.2rem; }
+        .skill-bar-wrap { margin-bottom: 0.8rem; }
+        .skill-bar-label { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--gray-muted); letter-spacing: 0.1em; margin-bottom: 0.4rem; }
+        .skill-bar { height: 4px; background: var(--gray-mid); position: relative; overflow: hidden; }
+        .skill-bar-fill { height: 100%; background: var(--yellow); transition: width 1s ease; }
+        .skill-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 1rem; }
+        .skill-tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--gray-muted); border: 1px solid rgba(255,255,255,0.08); padding: 0.2rem 0.5rem; letter-spacing: 0.08em; }
+        /* STATS */
+        .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 3rem; }
+        .stat-item { background: var(--black); padding: 1.5rem; text-align: center; }
+        .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--yellow); line-height: 1; }
+        .stat-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--gray-muted); letter-spacing: 0.2em; text-transform: uppercase; margin-top: 0.3rem; }
+        /* TERMINAL */
+        .terminal-section { margin-top: 3rem; background: var(--gray-dark); border: 1px solid var(--border); overflow: hidden; }
+        .terminal-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.8rem 1rem; background: var(--gray-mid); border-bottom: 1px solid var(--border); }
+        .terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .terminal-dot.r { background: #ff5f57; }
+        .terminal-dot.y { background: #febc2e; }
+        .terminal-dot.g { background: #28c840; }
+        .terminal-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--gray-muted); margin-left: auto; }
+        .terminal-body { padding: 1.5rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; line-height: 2; color: var(--gray-muted); }
+        .terminal-body .cmd { color: var(--green); }
+        .terminal-body .key { color: var(--yellow); }
+        .terminal-body .val { color: var(--white); }
+        .terminal-body .comment { color: var(--gray-light); }
+        .page-footer { background: var(--gray-dark); border-top: 1px solid var(--border); padding: 2rem 5%; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--gray-muted); margin-top: 4rem; }
+        .chat-panel { position: fixed; bottom: 0; right: 2rem; width: 340px; z-index: 5000; background: var(--gray-dark); border: 1px solid var(--border); border-bottom: none; transform: translateY(calc(100% - 48px)); transition: transform 0.3s cubic-bezier(0.22,1,0.36,1); }
+        .chat-panel.open { transform: translateY(0); }
+        .chat-header { height: 48px; display: flex; align-items: center; padding: 0 1rem; gap: 0.8rem; cursor: none; border-bottom: 1px solid var(--border); background: var(--gray-mid); }
+        .chat-header-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--white); flex: 1; }
+        .chat-body { height: 300px; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+        .chat-msg { padding: 0.6rem 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.5; max-width: 85%; }
+        .chat-msg.me { background: var(--yellow); color: var(--black); align-self: flex-end; }
+        .chat-footer { padding: 0.8rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
+        .chat-input { flex: 1; background: var(--black); border: 1px solid var(--border); color: var(--white); font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; padding: 0.5rem 0.7rem; outline: none; caret-color: var(--yellow); }
+        .chat-input:focus { border-color: var(--yellow); }
+        .chat-send { background: var(--yellow); color: var(--black); border: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; font-weight: 700; padding: 0.5rem 0.8rem; cursor: none; }
+        @media (max-width: 768px) {
+            body { cursor: auto; }
+            .cursor { display: none; }
+            .skills-grid { grid-template-columns: 1fr; }
+            .chat-panel { width: 100%; right: 0; }
+        }
+    </style>
+</head>
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="toast" id="mzdev-toast"></div>
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+    <div class="modal">
+        <button class="modal-close" onclick="closeModal('authModal')">&#10005;</button>
+        <div class="modal-title">KONTO</div>
+        <div class="modal-sub">// ANMELDEN ODER REGISTRIEREN</div>
+        <div class="modal-tabs" id="authTabs">
+            <button class="modal-tab active" onclick="switchTab('github')">GitHub</button>
+            <button class="modal-tab" onclick="switchTab('google')">Google</button>
+            <button class="modal-tab" onclick="switchTab('discord')">Discord</button>
+            <button class="modal-tab" onclick="switchTab('twitch')">Twitch</button>
+            <button class="modal-tab" onclick="switchTab('reddit')">Reddit</button>
+            <button class="modal-tab" onclick="switchTab('spotify')">Spotify</button>
+            <button class="modal-tab" onclick="switchTab('admin')">Admin</button>
+        </div>
+        <div class="modal-form active" id="form-github">
+            <div class="oauth-notice"><strong>GitHub OAuth</strong><br>Melde dich sicher ueber GitHub an. Avatar, Name und Bio werden automatisch geladen.</div>
+            <button class="m-btn" onclick="handleProviderLogin('github')"><svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;vertical-align:middle;margin-right:6px;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg> Mit GitHub anmelden</button>
+            <div class="m-error" id="github-error"></div>
+        </div>
+        <div class="modal-form" id="form-google">
+            <div class="oauth-notice"><strong>Google OAuth</strong><br>Melde dich sicher ueber dein Google-Konto an.</div>
+            <button class="m-btn" onclick="handleProviderLogin('google')" style="background:#4285F4;color:#fff;">Mit Google anmelden</button>
+            <div class="m-error" id="google-error"></div>
+        </div>
+        <div class="modal-form" id="form-discord">
+            <div class="oauth-notice"><strong>Discord OAuth</strong><br>Melde dich sicher ueber dein Discord-Konto an.</div>
+            <button class="m-btn" onclick="handleProviderLogin('discord')" style="background:#5865F2;color:#fff;">Mit Discord anmelden</button>
+            <div class="m-error" id="discord-error"></div>
+        </div>
+        <div class="modal-form" id="form-twitch">
+            <div class="oauth-notice"><strong>Twitch OAuth</strong><br>Melde dich sicher ueber dein Twitch-Konto an.</div>
+            <button class="m-btn" onclick="handleProviderLogin('twitch')" style="background:#9146FF;color:#fff;">Mit Twitch anmelden</button>
+            <div class="m-error" id="twitch-error"></div>
+        </div>
+        <div class="modal-form" id="form-reddit">
+            <div class="oauth-notice"><strong>Reddit OAuth</strong><br>Melde dich sicher ueber dein Reddit-Konto an.</div>
+            <button class="m-btn" onclick="handleProviderLogin('reddit')" style="background:#FF4500;color:#fff;">Mit Reddit anmelden</button>
+            <div class="m-error" id="reddit-error"></div>
+        </div>
+        <div class="modal-form" id="form-spotify">
+            <div class="oauth-notice"><strong>Spotify OAuth</strong><br>Melde dich sicher ueber dein Spotify-Konto an.</div>
+            <button class="m-btn" onclick="handleProviderLogin('spotify')" style="background:#1DB954;color:#fff;">Mit Spotify anmelden</button>
+            <div class="m-error" id="spotify-error"></div>
+        </div>
+        <div class="modal-form" id="form-admin">
+            <div class="m-group"><label class="m-label">Admin-Passwort</label><input type="password" class="m-input" id="admin-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')handleAdmin()"></div>
+            <button class="m-btn" onclick="handleAdmin()">Als Admin einloggen &#8594;</button>
+            <div class="m-error" id="admin-error"></div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- ADD/EDIT SKILL MODAL -->
+<div class="modal-overlay" id="addSkillModal">
+    <div class="modal" style="max-width:520px;">
+        <button class="modal-close" onclick="closeModal('addSkillModal')">&#10005;</button>
+        <div class="modal-title" id="skillModalTitle">NEUER SKILL</div>
+        <div class="modal-sub">// SKILL HINZUFUEGEN ODER BEARBEITEN</div>
+        <input type="hidden" id="editSkillId" value="">
+        <div class="m-group"><label class="m-label">Name</label><input type="text" class="m-input" id="sName" placeholder="z.B. React"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem;">
+            <div><label class="m-label">Kategorie</label><select class="m-input" id="sCat" style="cursor:pointer;"><option value="frontend">Frontend</option><option value="backend">Backend</option><option value="security">Security</option><option value="tools">Tools</option><option value="design">Design</option></select></div>
+            <div><label class="m-label">Level (0-100)</label><input type="number" class="m-input" id="sLevel" min="0" max="100" value="50"></div>
+        </div>
+        <div class="m-group"><label class="m-label">Icon (Emoji/Text)</label><input type="text" class="m-input" id="sIcon" placeholder="z.B. JS oder &#9883;"></div>
+        <div class="m-group"><label class="m-label">Beschreibung</label><textarea class="m-input" id="sDesc" style="min-height:60px;" placeholder="Kurze Beschreibung..."></textarea></div>
+        <div class="m-group"><label class="m-label">Tags (kommagetrennt)</label><input type="text" class="m-input" id="sTags" placeholder="React, Hooks, JSX"></div>
+        <button class="m-btn" onclick="saveSkill()">Speichern &#8594;</button>
+    </div>
+</div>
+<header>
+    <a href="index.html" class="logo">MZ<span>.</span>DEV</a>
+    <div class="header-rule"></div>
+    <nav>
+        <a href="index.html">Start</a>
+        <a href="articles.html">Artikel</a>
+        <a href="skills.html" class="active">Skills</a>
+        <a href="projects.html">Projekte</a>
+        <a href="search.html">Suche</a>
+        <a href="index.html#contact" class="nav-cta">Kontakt</a>
+        <div class="header-actions">
+            <a href="inbox.html" class="icon-btn" title="Postfach" style="font-size:0.9rem;">&#128232;<span class="inbox-badge" style="position:absolute;top:-3px;right:-3px;background:var(--red);color:white;font-size:0.55rem;min-width:14px;height:14px;border-radius:7px;display:none;align-items:center;justify-content:center;font-weight:700;"></span></a>
+            <a href="settings.html" class="icon-btn" title="Einstellungen" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </a>
+            <button class="icon-btn" id="chatToggleBtn" onclick="toggleChatPanel()" title="Nachrichten" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </button>
+            <div class="profile-wrap">
+                <button class="icon-btn" id="accountBtn" onclick="toggleProfileDropdown()" title="Konto">
+                    <svg viewBox="0 0 24 24" id="accountIcon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <img id="accountAvatar" src="" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;display:none;">
+                    <span class="online-dot" id="online-dot"></span>
+                </button>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="pd-user">
+                        <div class="pd-avatar" id="pd-avatar-wrap"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                        <div class="pd-info"><div class="pd-username" id="pd-username">Gast</div><div class="pd-role" id="pd-role">// NICHT ANGEMELDET</div></div>
+                    </div>
+                    <div class="pd-verified" id="pd-verified" style="display:none;"></div>
+                    <div id="pd-loggedout"><button class="pd-item" onclick="openModal('authModal');closeDropdown();"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Anmelden</button></div>
+                    <div id="pd-loggedin" style="display:none;">
+                        <a class="pd-item" href="profile.html"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Mein Profil</a>
+                        <a class="pd-item" href="settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg> Einstellungen</a>
+                        <button class="pd-item" id="pd-admin-btn" onclick="toggleAdminMode();closeDropdown();" style="display:none;"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Admin-Modus</button>
+                        <button class="pd-item" onclick="openChatPanel();closeDropdown();"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Nachrichten</button>
+                        <button class="pd-item danger" onclick="handleLogout();closeDropdown();"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Abmelden</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+<div class="page-hero">
+    <div class="page-tag">// 02 &mdash; Skills &amp; Technologien</div>
+    <h1 class="page-title">Skills &amp;<br>Technologien</h1>
+    <p class="page-sub">Mein Tech-Stack als Hobby-Entwickler &mdash; von Frontend-Frameworks bis zu Security-Tools. Ständig am Lernen und Experimentieren.</p>
+</div>
+<div class="skills-container">
+    <!-- STATS -->
+    <div class="stats-bar">
+        <div class="stat-item"><div class="stat-value">10+</div><div class="stat-label">Technologien</div></div>
+        <div class="stat-item"><div class="stat-value">15+</div><div class="stat-label">Projekte</div></div>
+        <div class="stat-item"><div class="stat-value">&infin;</div><div class="stat-label">Neugier</div></div>
+        <div class="stat-item"><div class="stat-value">24/7</div><div class="stat-label">Lernbereit</div></div>
+    </div>
+    <!-- FILTER -->
+    <div class="skills-filter">
+        <button class="filter-btn active" onclick="filterSkills('alle',this)">Alle</button>
+        <button class="filter-btn" onclick="filterSkills('frontend',this)">Frontend</button>
+        <button class="filter-btn" onclick="filterSkills('backend',this)">Backend</button>
+        <button class="filter-btn" onclick="filterSkills('security',this)">Security</button>
+        <button class="filter-btn" onclick="filterSkills('tools',this)">Tools</button>
+        <button class="filter-btn" onclick="filterSkills('design',this)">Design</button>
+    </div>
+    <!-- ADMIN: ADD SKILL -->
+    <div class="admin-add" style="display:none;margin-bottom:1.5rem;">
+        <button class="add-project-btn" onclick="openModal('addSkillModal')" style="background:var(--yellow);color:var(--black);border:none;font-family:'IBM Plex Mono',monospace;font-size:0.75rem;font-weight:700;padding:0.6rem 1.4rem;cursor:pointer;">+ Neuen Skill</button>
+    </div>
+    <!-- SKILLS GRID -->
+    <div class="skills-grid" id="skillsGrid"></div>
+    <!-- TERMINAL -->
+    <div class="terminal-section">
+        <div class="terminal-bar">
+            <div class="terminal-dot r"></div>
+            <div class="terminal-dot y"></div>
+            <div class="terminal-dot g"></div>
+            <div class="terminal-title">michael@dev ~ skills.json</div>
+        </div>
+        <div class="terminal-body">
+            <span class="cmd">&gt; cat</span> skills.json<br>
+            {<br>
+            &nbsp;&nbsp;<span class="key">"name"</span>: <span class="val">"Michael Zellner"</span>,<br>
+            &nbsp;&nbsp;<span class="key">"role"</span>: <span class="val">"Hobby Dev (Fullstack)"</span>,<br>
+            &nbsp;&nbsp;<span class="key">"focus"</span>: <span class="val">"Web &amp; Security &amp; Design"</span>,<br>
+            &nbsp;&nbsp;<span class="key">"learning"</span>: [<span class="val">"Rust"</span>, <span class="val">"WebAssembly"</span>, <span class="val">"AI/ML"</span>],<br>
+            &nbsp;&nbsp;<span class="key">"motto"</span>: <span class="val">"Jeden Tag besser werden."</span><br>
+            }<br>
+            <span class="cmd">&gt;</span> <span class="comment">// Immer am Lernen...</span>
+        </div>
+    </div>
+</div>
+<div class="page-footer">
+    &copy; 2026 Michael Zellner &middot; Hobby-Dev &middot; <a href="index.html" style="color:var(--yellow);text-decoration:none;">&larr; Zurück zur Hauptseite</a>
+</div>
+<!-- CHAT -->
+<div class="chat-panel" id="chatPanel">
+    <div class="chat-header" onclick="toggleChatPanel()">
+        <svg style="width:16px;height:16px;fill:none;stroke:var(--yellow);stroke-width:1.8;stroke-linecap:round;" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="chat-header-title">Nachrichten</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--gray-muted);margin-left:auto;">&#128274; E2E</span>
+    </div>
+    <div class="chat-body" id="chatBody"><div style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--gray-muted);text-align:center;padding:2rem;">Ende-zu-Ende verschlüsselt</div></div>
+    <div class="chat-footer">
+        <input class="chat-input" id="chatInput" placeholder="Nachricht&#8230;" onkeydown="if(event.key==='Enter')sendChatMessage()">
+        <button class="chat-send" onclick="sendChatMessage()">&#8594;</button>
+    </div>
+</div>
+<script>
+const MZDEV={get theme(){return JSON.parse(localStorage.getItem('mzdev_theme')||JSON.stringify({accent:'#f5e642',bg:'#000000',surface:'#111111'}))},saveTheme(t){localStorage.setItem('mzdev_theme',JSON.stringify(t));MZDEV.applyTheme(t)},applyTheme(t){t=t||MZDEV.theme;document.documentElement.style.setProperty('--yellow',t.accent);document.documentElement.style.setProperty('--black',t.bg);document.documentElement.style.setProperty('--gray-dark',t.surface)},get currentUser(){return JSON.parse(localStorage.getItem('mzdev_current_user')||'null')},get isAdmin(){return localStorage.getItem('mzdev_is_admin')==='1'},setSession(user,isAdmin){localStorage.setItem('mzdev_current_user',JSON.stringify(user));localStorage.setItem('mzdev_is_admin',isAdmin?'1':'0')},clearSession(){localStorage.removeItem('mzdev_current_user');localStorage.removeItem('mzdev_is_admin')},get messages(){return JSON.parse(localStorage.getItem('mzdev_messages')||'{}')},saveMessages(m){localStorage.setItem('mzdev_messages',JSON.stringify(m))},xorEncrypt(text,key='mzdev2026'){return btoa(Array.from(text).map((c,i)=>String.fromCharCode(c.charCodeAt(0)^key.charCodeAt(i%key.length))).join(''))},get profiles(){return JSON.parse(localStorage.getItem('mzdev_profiles')||'{}')},getProfile(u){return MZDEV.profiles[u]||null},saveProfile(u,d){const p=MZDEV.profiles;p[u]={...p[u],...d};localStorage.setItem('mzdev_profiles',JSON.stringify(p))},showToast(msg,type=''){let t=document.getElementById('mzdev-toast');if(!t){t=document.createElement('div');t.id='mzdev-toast';document.body.appendChild(t)}t.textContent=msg;t.className='toast'+(type?' '+type:'');t.classList.add('show');clearTimeout(MZDEV._toastTimer);MZDEV._toastTimer=setTimeout(()=>t.classList.remove('show'),3000)},filterContent(text){const bad=['porn','sex','xxx','nude','naked','fuck','shit','malware'];const l=text.toLowerCase();for(const w of bad)if(l.includes(w))return null;return text},randomName(){const a=['Dark','Pixel','Neon','Ghost','Cyber'];const n=['Coder','Dev','Hacker','Builder','Fox'];return a[Math.floor(Math.random()*a.length)]+n[Math.floor(Math.random()*n.length)]+Math.floor(Math.random()*9000+1000)}};
+document.addEventListener('DOMContentLoaded',()=>MZDEV.applyTheme());
+</script>
+<script>
+const cursor=document.getElementById('cursor');let mouseX=0,mouseY=0,curX=0,curY=0;
+document.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY});
+function animateCursor(){curX+=(mouseX-curX)*0.15;curY+=(mouseY-curY)*0.15;if(cursor){cursor.style.left=curX+'px';cursor.style.top=curY+'px'}requestAnimationFrame(animateCursor)}animateCursor();
+document.addEventListener('mouseover',e=>{if(e.target.matches('a,button,input,.filter-btn,.skill-card'))cursor&&cursor.classList.add('hover');else cursor&&cursor.classList.remove('hover')});
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')}));
+function switchTab(tab){const tabs=['github','google','discord','twitch','reddit','spotify','admin'];tabs.forEach((t,i)=>{const btn=document.querySelector('#authTabs button:nth-child('+(i+1)+')');if(btn)btn.classList.toggle('active',t===tab);const form=document.getElementById('form-'+t);if(form)form.classList.toggle('active',t===tab)})}
+function updateUI(){const user=MZDEV.currentUser,ia=MZDEV.isAdmin;document.getElementById('online-dot').classList.toggle('visible',!!user);document.getElementById('pd-username').textContent=user?(user.displayName||user.username):'Gast';document.getElementById('pd-role').textContent=user?(ia?'// ADMIN':'// '+((user.provider||'').toUpperCase())):'// NICHT ANGEMELDET';document.getElementById('pd-loggedin').style.display=user?'block':'none';document.getElementById('pd-loggedout').style.display=user?'none':'block';const cb=document.getElementById('chatToggleBtn');if(cb)cb.style.display=user?'flex':'none';const ab=document.getElementById('pd-admin-btn');if(ab)ab.style.display=ia?'flex':'none';if(user&&user.avatar){document.getElementById('accountIcon').style.display='none';const aa=document.getElementById('accountAvatar');aa.src=user.avatar;aa.style.display='block';document.getElementById('pd-avatar-wrap').innerHTML=`<img src="${user.avatar}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`}else{document.getElementById('accountIcon').style.display='';document.getElementById('accountAvatar').style.display='none'}const v=document.getElementById('pd-verified');if(user&&user.connectedServices&&user.connectedServices.length){v.style.display='flex';v.innerHTML=user.connectedServices.map(s=>`<span class="verified-badge">${s.toUpperCase()} \u2713</span>`).join('')}else v.style.display='none';if(ia)document.body.classList.add('admin-mode')}
+function toggleProfileDropdown(){document.getElementById('profileDropdown').classList.toggle('open')}
+function closeDropdown(){document.getElementById('profileDropdown').classList.remove('open')}
+document.addEventListener('click',e=>{const w=document.querySelector('.profile-wrap');if(w&&!w.contains(e.target))closeDropdown()});
+function toggleAdminMode(){if(MZDEV.isAdmin)document.body.classList.toggle('admin-mode')}
+function toggleChatPanel(){document.getElementById('chatPanel').classList.toggle('open')}
+function openChatPanel(){document.getElementById('chatPanel').classList.add('open')}
+function sendChatMessage(){const user=MZDEV.currentUser;if(!user){MZDEV.showToast('Bitte erst anmelden','error');return}const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;const filtered=MZDEV.filterContent(msg);if(!filtered){MZDEV.showToast('Unzulässiger Inhalt','error');return}const chatBody=document.getElementById('chatBody');const el=document.createElement('div');el.className='chat-msg me';el.innerHTML=`${msg}<div class="chat-msg-meta">${user.username} \u00b7 jetzt</div>`;chatBody.appendChild(el);chatBody.scrollTop=chatBody.scrollHeight;const msgs=MZDEV.messages;if(!msgs[user.username])msgs[user.username]=[];msgs[user.username].push({from:user.username,text:MZDEV.xorEncrypt(msg),ts:Date.now()});MZDEV.saveMessages(msgs);input.value=''}
+// SKILLS DATA
+const SKILLS = [
+    { name:'HTML5 & CSS3', cat:'frontend', icon:'&lt;/&gt;', level:90, desc:'Semantisches HTML, modernes CSS, Flexbox, Grid, Animationen und responsive Design.', tags:['HTML5','CSS3','Flexbox','Grid','Responsive'] },
+    { name:'JavaScript', cat:'frontend', icon:'JS', level:85, desc:'Vanilla JS, ES6+, DOM-Manipulation, Async/Await, Module und moderne APIs.', tags:['ES6+','DOM','Async','Fetch','Modules'] },
+    { name:'React', cat:'frontend', icon:'&#9883;', level:70, desc:'Hooks, State Management, Komponenten-Architektur und Performance-Optimierung.', tags:['Hooks','JSX','useState','useEffect','Components'] },
+    { name:'TypeScript', cat:'frontend', icon:'TS', level:65, desc:'Typsicherheit, Interfaces, Generics und Integration in React-Projekte.', tags:['Types','Interfaces','Generics','Enums'] },
+    { name:'Node.js', cat:'backend', icon:'N', level:75, desc:'Express, REST APIs, Middleware, File System und npm-Ökosystem.', tags:['Express','REST','npm','Middleware','APIs'] },
+    { name:'Python', cat:'backend', icon:'&#128013;', level:70, desc:'Scripts, Automation, Flask/FastAPI, Data Processing und Web Scraping.', tags:['Flask','FastAPI','Automation','Scripting'] },
+    { name:'Datenbanken', cat:'backend', icon:'&#128451;', level:60, desc:'SQL (MySQL, PostgreSQL), NoSQL (MongoDB), grundlegende Datenbankmodellierung.', tags:['SQL','MongoDB','PostgreSQL','MySQL'] },
+    { name:'OWASP & Web Security', cat:'security', icon:'&#128274;', level:75, desc:'OWASP Top 10, XSS-Prävention, CSRF, SQL Injection, Security Headers.', tags:['OWASP','XSS','CSRF','SQLi','Headers'] },
+    { name:'Netzwerk-Security', cat:'security', icon:'&#128737;', level:55, desc:'Grundlagen Pentesting, Nmap, Wireshark, Burp Suite und CTF-Erfahrung.', tags:['Nmap','Wireshark','Burp','CTF','Pentesting'] },
+    { name:'Git & GitHub', cat:'tools', icon:'&#9884;', level:85, desc:'Versionskontrolle, Branching, PRs, GitHub Actions und Collaboration.', tags:['Git','GitHub','CI/CD','Actions','Branching'] },
+    { name:'Docker', cat:'tools', icon:'&#128051;', level:50, desc:'Container-Grundlagen, Docker Compose, Images erstellen und verwalten.', tags:['Container','Compose','Images','DevOps'] },
+    { name:'Linux', cat:'tools', icon:'&#128039;', level:70, desc:'Bash, Shell-Scripting, Systemadministration, Server-Setup und SSH.', tags:['Bash','Shell','SSH','Systemd','CLI'] },
+    { name:'UI/UX Design', cat:'design', icon:'&#127912;', level:65, desc:'Figma, Wireframing, Design-Systeme, Accessibility und User Research.', tags:['Figma','Wireframes','A11y','Design Systems'] },
+    { name:'Responsive Design', cat:'design', icon:'&#128241;', level:80, desc:'Mobile-First, Media Queries, Fluid Typography und adaptive Layouts.', tags:['Mobile-First','Media Queries','Fluid','Adaptive'] },
+];
+let currentSkillFilter='alle';
+function renderSkills(filter){
+    filter=filter||currentSkillFilter;
+    const grid=document.getElementById('skillsGrid');
+    const filtered=filter==='alle'?SKILLS:SKILLS.filter(s=>s.cat===filter);
+    const isAdmin=MZDEV.isAdmin;
+    grid.innerHTML=filtered.map((s,idx)=>`
+        <div class="skill-card" data-cat="${s.cat}">
+            <div class="skill-header">
+                <div class="skill-icon">${s.icon}</div>
+                <div class="skill-title-wrap">
+                    <div class="skill-name">${s.name}</div>
+                    <div class="skill-category">${s.cat}</div>
+                </div>
+            </div>
+            <div class="skill-desc">${s.desc}</div>
+            <div class="skill-bar-wrap">
+                <div class="skill-bar-label"><span>Level</span><span>${s.level}%</span></div>
+                <div class="skill-bar"><div class="skill-bar-fill" style="width:0%" data-level="${s.level}"></div></div>
+            </div>
+            <div class="skill-tags">${s.tags.map(t=>`<span class="skill-tag">${t}</span>`).join('')}</div>
+            ${isAdmin?`<div style="display:flex;gap:0.5rem;margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border);">
+                <button onclick="editSkill(${idx})" style="flex:1;background:none;border:1px solid rgba(245,230,66,0.3);color:rgba(245,230,66,0.7);font-family:'IBM Plex Mono',monospace;font-size:0.62rem;padding:0.3rem 0.6rem;cursor:pointer;">Bearbeiten</button>
+                <button onclick="deleteSkill(${idx})" style="background:none;border:1px solid rgba(255,95,87,0.3);color:rgba(255,95,87,0.7);font-family:'IBM Plex Mono',monospace;font-size:0.62rem;padding:0.3rem 0.6rem;cursor:pointer;">Loeschen</button>
+            </div>`:''}
+        </div>
+    `).join('');
+    setTimeout(()=>{document.querySelectorAll('.skill-bar-fill').forEach(el=>{el.style.width=el.dataset.level+'%'})},100);
+    // Show admin add button
+    const adminAdd=document.querySelector('.admin-add');
+    if(adminAdd)adminAdd.style.display=isAdmin?'block':'none';
+}
+function filterSkills(cat,el){
+    currentSkillFilter=cat;
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    el.classList.add('active');
+    renderSkills(cat);
+}
+function editSkill(idx){
+    const s=SKILLS[idx];
+    document.getElementById('editSkillId').value=idx;
+    document.getElementById('skillModalTitle').textContent='SKILL BEARBEITEN';
+    document.getElementById('sName').value=s.name;
+    document.getElementById('sCat').value=s.cat;
+    document.getElementById('sLevel').value=s.level;
+    document.getElementById('sIcon').value=s.icon;
+    document.getElementById('sDesc').value=s.desc;
+    document.getElementById('sTags').value=s.tags.join(', ');
+    openModal('addSkillModal');
+}
+function deleteSkill(idx){
+    if(!confirm('Skill wirklich loeschen?'))return;
+    SKILLS.splice(idx,1);
+    renderSkills();
+    MZDEV.showToast('Skill geloescht','success');
+}
+function saveSkill(){
+    const name=document.getElementById('sName').value.trim();
+    const cat=document.getElementById('sCat').value;
+    const level=parseInt(document.getElementById('sLevel').value)||50;
+    const icon=document.getElementById('sIcon').value.trim()||'*';
+    const desc=document.getElementById('sDesc').value.trim();
+    const tags=document.getElementById('sTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+    if(!name||!desc){MZDEV.showToast('Name und Beschreibung sind Pflicht','error');return;}
+    const editIdx=document.getElementById('editSkillId').value;
+    if(editIdx!==''){
+        SKILLS[parseInt(editIdx)]={name,cat,icon,level,desc,tags};
+        MZDEV.showToast('Skill aktualisiert','success');
+    }else{
+        SKILLS.push({name,cat,icon,level,desc,tags});
+        MZDEV.showToast('Skill hinzugefuegt','success');
+    }
+    closeModal('addSkillModal');
+    document.getElementById('editSkillId').value='';
+    document.getElementById('skillModalTitle').textContent='NEUER SKILL';
+    ['sName','sDesc','sTags','sIcon'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('sLevel').value='50';
+    renderSkills();
+}
+MZDEV.applyTheme();
+updateUI();
+renderSkills();
+</script>
+<script src="../shared.js"></script>
+</script>
+<script>
+// OAuth login - redirect to backend OAuth flow
+function handleGithubLogin() { API.oauthLogin('github'); }
+function handleProviderLogin(provider) { API.oauthLogin(provider); }
+// Admin login via backend API
+async function handleAdmin() {
+    const pw = document.getElementById('admin-password').value;
+    const errEl = document.getElementById('admin-error');
+    errEl.textContent = '';
+    if (!pw) { errEl.textContent = '// Bitte Passwort eingeben'; return; }
+    try {
+        await API.adminLogin(pw);
+        closeModal('authModal');
+        updateUI();
+        if (typeof activateAdminMode === 'function') activateAdminMode();
+        MZDEV.showToast('Admin-Modus aktiv', 'success');
+    } catch (e) {
+        errEl.textContent = '// ' + e.message;
+    }
+}
+// Logout via backend API
+async function handleLogout() {
+    await API.logout();
+    if (typeof deactivateAdminMode === 'function') deactivateAdminMode();
+    updateUI();
+    MZDEV.showToast('Abgemeldet');
+}
+// Handle OAuth callback if returning from provider
+(async function() {
+    const handled = await API.handleAuthCallback();
+    if (handled) { updateUI(); renderSkills(); }
+})();
+</script>
+</body>
+</html>

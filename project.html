@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projekt — MZ.DEV</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <style>
+        /* ═══ RESET + VARS ═══ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --yellow: #f5e642; --black: #000000; --white: #ffffff; --gray-dark: #111111; --gray: #1a1a1a; --gray-mid: #2a2a2a; --gray-light: #888888; --red: #ff5f57; --green: #28ca42; --blue: #3b82f6; --font: 'Segoe UI', system-ui, -apple-system, sans-serif; --mono: 'Fira Code', 'Cascadia Code', 'Consolas', monospace; }
+        body { background: var(--black); color: var(--white); font-family: var(--font); line-height: 1.6; min-height: 100vh; }
+        a { color: var(--yellow); text-decoration: none; } a:hover { text-decoration: underline; }
+        /* ═══ HEADER ═══ */
+        .site-header { background: var(--gray-dark); border-bottom: 1px solid var(--gray-mid); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 1.4rem; font-weight: 700; color: var(--yellow); letter-spacing: 2px; }
+        .header-nav { display: flex; gap: 1.5rem; align-items: center; }
+        .header-nav a { color: var(--gray-light); font-size: 0.9rem; transition: color 0.2s; } .header-nav a:hover, .header-nav a.active { color: var(--yellow); text-decoration: none; }
+        .header-actions { display: flex; gap: 0.75rem; align-items: center; }
+        .header-btn { background: var(--gray-mid); border: 1px solid var(--gray-mid); color: var(--white); padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; position: relative; transition: all 0.2s; } .header-btn:hover { border-color: var(--yellow); }
+        .notif-badge, .inbox-badge { position: absolute; top: -5px; right: -5px; background: var(--red); color: white; font-size: 0.65rem; min-width: 16px; height: 16px; border-radius: 8px; display: none; align-items: center; justify-content: center; font-weight: 700; }
+        /* ═══ ADMIN ═══ */
+        .admin-indicator { display: none; background: var(--yellow); color: var(--black); text-align: center; padding: 0.25rem; font-size: 0.75rem; font-weight: 600; }
+        body.admin-mode .admin-indicator { display: block; }
+        .admin-toolbar { display: none; position: fixed; bottom: 1rem; right: 1rem; background: var(--gray-dark); border: 1px solid var(--yellow); border-radius: 10px; padding: 0.75rem; z-index: 200; gap: 0.5rem; flex-direction: column; }
+        body.admin-mode .admin-toolbar { display: flex; }
+        .admin-btn { background: var(--yellow); color: var(--black); border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: opacity 0.2s; } .admin-btn:hover { opacity: 0.85; }
+        .admin-btn.danger { background: var(--red); color: white; }
+        body.admin-mode [contenteditable="true"] { outline: 1px dashed rgba(245,230,66,0.4); padding: 2px 4px; border-radius: 3px; }
+        .admin-only { display: none; } body.admin-mode .admin-only { display: inline-flex; }
+        /* ═══ MAIN ═══ */
+        .main-content { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+        .breadcrumb { display: flex; gap: 0.5rem; align-items: center; font-size: 0.85rem; color: var(--gray-light); margin-bottom: 1.5rem; }
+        .breadcrumb a { color: var(--gray-light); } .breadcrumb a:hover { color: var(--yellow); }
+        /* ═══ PROJECT HEADER ═══ */
+        .project-header { margin-bottom: 2rem; }
+        .project-header h1 { font-size: 2rem; color: var(--yellow); margin-bottom: 0.5rem; }
+        .project-meta { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+        .project-status { padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .project-status.active { background: rgba(40,202,66,0.2); color: var(--green); }
+        .project-status.wip { background: rgba(245,230,66,0.2); color: var(--yellow); }
+        .project-status.done { background: rgba(59,130,246,0.2); color: var(--blue); }
+        .project-status.archived { background: rgba(136,136,136,0.2); color: var(--gray-light); }
+        .project-category { color: var(--gray-light); font-size: 0.85rem; }
+        .project-links { display: flex; gap: 0.75rem; margin-top: 0.75rem; }
+        .project-link { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; background: var(--gray-mid); border-radius: 6px; font-size: 0.85rem; color: var(--white); transition: all 0.2s; } .project-link:hover { background: var(--yellow); color: var(--black); text-decoration: none; }
+        .tech-tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+        .tech-tag { background: var(--gray-mid); color: var(--yellow); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; }
+        /* ═══ TABS ═══ */
+        .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--gray-mid); margin-bottom: 1.5rem; }
+        .tab-btn { padding: 0.75rem 1.25rem; background: none; border: none; color: var(--gray-light); cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn:hover { color: var(--white); } .tab-btn.active { color: var(--yellow); border-bottom-color: var(--yellow); }
+        .tab-content { display: none; } .tab-content.active { display: block; }
+        /* ═══ README ═══ */
+        .readme-content { background: var(--gray); border: 1px solid var(--gray-mid); border-radius: 8px; padding: 1.5rem; line-height: 1.8; }
+        .readme-content h2, .readme-content h3 { color: var(--yellow); margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .readme-content code { background: var(--gray-mid); padding: 0.15rem 0.4rem; border-radius: 3px; font-family: var(--mono); font-size: 0.85em; }
+        .readme-content pre { background: var(--gray-dark); padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 1rem 0; }
+        .readme-content pre code { background: none; padding: 0; }
+        /* ═══ FILES LIST ═══ */
+        .files-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+        .file-row { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; background: var(--gray); border: 1px solid var(--gray-mid); border-radius: 8px; transition: border-color 0.2s; }
+        .file-row:hover { border-color: var(--yellow); }
+        .file-icon { font-size: 1.5rem; flex-shrink: 0; width: 2rem; text-align: center; }
+        .file-info { flex: 1; min-width: 0; }
+        .file-name { font-weight: 600; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-desc { font-size: 0.8rem; color: var(--gray-light); margin-top: 0.1rem; }
+        .file-meta { font-size: 0.75rem; color: var(--gray-light); }
+        .file-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+        .file-btn { background: var(--gray-mid); border: 1px solid var(--gray-mid); color: var(--white); padding: 0.35rem 0.7rem; border-radius: 5px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; } .file-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+        .file-btn.primary { background: var(--yellow); color: var(--black); border-color: var(--yellow); } .file-btn.primary:hover { opacity: 0.85; }
+        .empty-state { text-align: center; padding: 3rem 1rem; color: var(--gray-light); }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+        /* ═══ FILE VIEWER MODAL ═══ */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: var(--gray-dark); border: 1px solid var(--gray-mid); border-radius: 12px; width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--gray-mid); }
+        .modal-title { font-weight: 600; color: var(--yellow); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .modal-close { background: none; border: none; color: var(--gray-light); font-size: 1.5rem; cursor: pointer; padding: 0 0.5rem; } .modal-close:hover { color: var(--white); }
+        .modal-body { flex: 1; overflow: auto; padding: 1.25rem; }
+        .modal-body img { max-width: 100%; border-radius: 6px; }
+        .modal-body iframe { width: 100%; min-height: 500px; border: none; border-radius: 6px; background: white; }
+        .modal-body pre { background: var(--gray); padding: 1rem; border-radius: 6px; overflow-x: auto; font-family: var(--mono); font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; max-height: 60vh; overflow-y: auto; }
+        .modal-body video, .modal-body audio { max-width: 100%; }
+        .modal-footer { display: flex; gap: 0.75rem; justify-content: flex-end; padding: 0.75rem 1.25rem; border-top: 1px solid var(--gray-mid); }
+        /* ═══ UPLOAD MODAL ═══ */
+        .upload-zone { border: 2px dashed var(--gray-mid); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--yellow); }
+        .upload-zone .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--gray-light); }
+        .form-input { width: 100%; background: var(--gray); border: 1px solid var(--gray-mid); color: var(--white); padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.9rem; font-family: var(--font); } .form-input:focus { outline: none; border-color: var(--yellow); }
+        textarea.form-input { min-height: 80px; resize: vertical; }
+        /* ═══ EDIT PROJECT MODAL ═══ */
+        select.form-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.8rem center; }
+        /* ═══ TOAST ═══ */
+        .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--gray-dark); color: var(--white); padding: 0.75rem 1.5rem; border-radius: 8px; border: 1px solid var(--gray-mid); font-size: 0.9rem; z-index: 9999; transition: transform 0.3s ease; pointer-events: none; }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.success { border-color: var(--green); } .toast.error { border-color: var(--red); }
+        /* ═══ RESPONSIVE ═══ */
+        @media (max-width: 768px) {
+            .site-header { padding: 0.75rem 1rem; flex-wrap: wrap; gap: 0.5rem; }
+            .header-nav { gap: 1rem; }
+            .main-content { padding: 1rem; }
+            .project-header h1 { font-size: 1.5rem; }
+            .file-row { flex-wrap: wrap; }
+            .file-actions { width: 100%; justify-content: flex-end; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ADMIN INDICATOR -->
+    <div class="admin-indicator">ADMIN-MODUS AKTIV</div>
+    <!-- HEADER -->
+    <header class="site-header">
+        <a href="index.html" class="logo">MZ.DEV</a>
+        <nav class="header-nav">
+            <a href="index.html">Home</a>
+            <a href="articles.html">Artikel</a>
+            <a href="projects.html" class="active">Projekte</a>
+            <a href="skills.html">Skills</a>
+            <a href="search.html">Suche</a>
+        </nav>
+        <div class="header-actions">
+            <a href="inbox.html" class="header-btn" title="Postfach">&#128232;<span class="inbox-badge"></span></a>
+            <a href="settings.html" class="header-btn" title="Einstellungen">&#9881;</a>
+            <button class="header-btn" id="notifBtn" title="Benachrichtigungen">&#128276;<span class="notif-badge"></span></button>
+            <a href="profile.html" class="header-btn" title="Profil">&#128100;</a>
+        </div>
+    </header>
+    <!-- MAIN -->
+    <main class="main-content">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+            <a href="index.html">Home</a> <span>/</span>
+            <a href="projects.html">Projekte</a> <span>/</span>
+            <span id="breadcrumbName">Laden...</span>
+        </div>
+        <!-- Project Header -->
+        <div class="project-header" id="projectHeader">
+            <h1 id="projectName" contenteditable="false">Laden...</h1>
+            <div class="project-meta">
+                <span class="project-status active" id="projectStatus">Active</span>
+                <span class="project-category" id="projectCategory"></span>
+                <span class="project-category" id="projectDate"></span>
+            </div>
+            <p id="projectDescription" contenteditable="false" style="color:var(--gray-light);margin-bottom:0.75rem;"></p>
+            <div class="tech-tags" id="techTags"></div>
+            <div class="project-links" id="projectLinks"></div>
+            <div style="margin-top:1rem;">
+                <button class="admin-btn admin-only" onclick="openEditProjectModal()">Projekt bearbeiten</button>
+                <button class="admin-btn danger admin-only" style="margin-left:0.5rem;" onclick="deleteProject()">Projekt loeschen</button>
+            </div>
+        </div>
+        <!-- Tabs -->
+        <div class="tab-bar">
+            <button class="tab-btn active" data-tab="readme">README / Beschreibung</button>
+            <button class="tab-btn" data-tab="files">Dateien <span id="filesCount" style="color:var(--gray-light);font-size:0.8em;"></span></button>
+        </div>
+        <!-- README Tab -->
+        <div class="tab-content active" id="tab-readme">
+            <div class="readme-content" id="readmeContent" contenteditable="false">
+                <p style="color:var(--gray-light);">Keine README vorhanden.</p>
+            </div>
+            <div style="margin-top:1rem;">
+                <button class="admin-btn admin-only" onclick="saveReadme()">README speichern</button>
+            </div>
+        </div>
+        <!-- Files Tab -->
+        <div class="tab-content" id="tab-files">
+            <div style="margin-bottom:1rem;">
+                <button class="admin-btn admin-only" onclick="openUploadModal()">+ Datei hochladen</button>
+            </div>
+            <div class="files-grid" id="filesGrid">
+                <div class="empty-state">
+                    <div class="icon">&#128193;</div>
+                    <p>Noch keine Dateien vorhanden</p>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- FILE VIEWER MODAL -->
+    <div class="modal-overlay" id="viewerModal">
+        <div class="modal" style="max-width:1000px;">
+            <div class="modal-header">
+                <span class="modal-title" id="viewerTitle">Datei</span>
+                <button class="modal-close" onclick="closeViewer()">&times;</button>
+            </div>
+            <div class="modal-body" id="viewerBody">
+                <p>Laden...</p>
+            </div>
+            <div class="modal-footer">
+                <a id="viewerDownload" href="#" class="file-btn primary" download>Download</a>
+                <button class="file-btn" onclick="closeViewer()">Schliessen</button>
+            </div>
+        </div>
+    </div>
+    <!-- UPLOAD MODAL -->
+    <div class="modal-overlay" id="uploadModal">
+        <div class="modal" style="max-width:500px;">
+            <div class="modal-header">
+                <span class="modal-title">Datei hochladen</span>
+                <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="icon">&#128228;</div>
+                    <p>Klicken oder Datei hierher ziehen</p>
+                    <p style="font-size:0.8rem;color:var(--gray-light);">Max. 50 MB</p>
+                </div>
+                <input type="file" id="fileInput" style="display:none;">
+                <div id="selectedFile" style="display:none;margin-top:1rem;padding:0.75rem;background:var(--gray);border-radius:6px;">
+                    <span id="selectedFileName"></span>
+                </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label>Beschreibung (optional)</label>
+                    <textarea class="form-input" id="fileDescription" placeholder="Kurze Beschreibung der Datei..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="file-btn" onclick="closeUploadModal()">Abbrechen</button>
+                <button class="admin-btn" id="uploadBtn" onclick="uploadFile()" disabled>Hochladen</button>
+            </div>
+        </div>
+    </div>
+    <!-- EDIT PROJECT MODAL -->
+    <div class="modal-overlay" id="editProjectModal">
+        <div class="modal" style="max-width:600px;">
+            <div class="modal-header">
+                <span class="modal-title">Projekt bearbeiten</span>
+                <button class="modal-close" onclick="closeEditProjectModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label>Name</label><input class="form-input" id="editName"></div>
+                <div class="form-group"><label>Beschreibung</label><textarea class="form-input" id="editDesc"></textarea></div>
+                <div class="form-group"><label>Kategorie</label><input class="form-input" id="editCategory"></div>
+                <div class="form-group"><label>Status</label><select class="form-input" id="editStatus"><option value="active">Active</option><option value="wip">Work in Progress</option><option value="done">Done</option><option value="archived">Archived</option></select></div>
+                <div class="form-group"><label>Technologien (kommagetrennt)</label><input class="form-input" id="editTech"></div>
+                <div class="form-group"><label>GitHub URL</label><input class="form-input" id="editGithub" type="url"></div>
+                <div class="form-group"><label>Live URL</label><input class="form-input" id="editLive" type="url"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="file-btn" onclick="closeEditProjectModal()">Abbrechen</button>
+                <button class="admin-btn" onclick="saveProjectEdit()">Speichern</button>
+            </div>
+        </div>
+    </div>
+    <!-- ADMIN TOOLBAR -->
+    <div class="admin-toolbar">
+        <span style="font-size:0.75rem;color:var(--yellow);font-weight:700;">ADMIN</span>
+    </div>
+    <script src="../shared.js"></script>
+    <script src="../api.js"></script>
+    <script>
+    let projectId = null;
+    let projectData = null;
+    // ── Get project ID from URL ──
+    const params = new URLSearchParams(window.location.search);
+    projectId = parseInt(params.get('id')) || null;
+    // ── Tab switching ──
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        });
+    });
+    // ── Load project ──
+    async function loadProject() {
+        if (!projectId) {
+            document.getElementById('projectName').textContent = 'Projekt nicht gefunden';
+            return;
+        }
+        try {
+            const data = await API.getProject(projectId);
+            if (!data || data.error) { document.getElementById('projectName').textContent = 'Projekt nicht gefunden'; return; }
+            projectData = data;
+            document.title = data.name + ' — MZ.DEV';
+            document.getElementById('breadcrumbName').textContent = data.name;
+            document.getElementById('projectName').textContent = data.name;
+            document.getElementById('projectDescription').textContent = data.description || '';
+            document.getElementById('projectCategory').textContent = data.category || '';
+            document.getElementById('projectDate').textContent = MZDEV.formatDate(data.created_at);
+            // Status
+            const statusEl = document.getElementById('projectStatus');
+            statusEl.textContent = data.status;
+            statusEl.className = 'project-status ' + (data.status || 'active');
+            // Tech tags
+            const tags = data.technologies || [];
+            document.getElementById('techTags').innerHTML = tags.map(t => '<span class="tech-tag">' + t + '</span>').join('');
+            // Links
+            let links = '';
+            if (data.github_url) links += '<a href="' + data.github_url + '" class="project-link" target="_blank">&#128187; GitHub</a>';
+            if (data.live_url) links += '<a href="' + data.live_url + '" class="project-link" target="_blank">&#127760; Live</a>';
+            document.getElementById('projectLinks').innerHTML = links;
+            // README
+            if (data.readme) {
+                document.getElementById('readmeContent').innerHTML = data.readme;
+            }
+            // Files
+            renderFiles(data.files || []);
+            document.getElementById('filesCount').textContent = '(' + (data.files || []).length + ')';
+            // Admin contenteditable
+            if (MZDEV.isAdmin) {
+                MZDEV.activateAdminMode();
+                document.getElementById('projectName').contentEditable = 'true';
+                document.getElementById('projectDescription').contentEditable = 'true';
+                document.getElementById('readmeContent').contentEditable = 'true';
+            }
+        } catch (e) {
+            document.getElementById('projectName').textContent = 'Fehler: ' + e.message;
+        }
+    }
+    function renderFiles(files) {
+        const grid = document.getElementById('filesGrid');
+        if (!files.length) {
+            grid.innerHTML = '<div class="empty-state"><div class="icon">&#128193;</div><p>Noch keine Dateien vorhanden</p></div>';
+            return;
+        }
+        grid.innerHTML = files.map(f => {
+            const ext = (f.extension || f.original_name.split('.').pop() || '').toLowerCase();
+            return '<div class="file-row">' +
+                '<span class="file-icon">' + MZDEV.fileIcon(ext) + '</span>' +
+                '<div class="file-info">' +
+                    '<div class="file-name">' + f.original_name + '</div>' +
+                    (f.description ? '<div class="file-desc">' + f.description + '</div>' : '') +
+                    '<div class="file-meta">' + MZDEV.formatFileSize(f.file_size || 0) + ' &middot; ' + MZDEV.formatDate(f.created_at) + (f.download_count ? ' &middot; ' + f.download_count + ' Downloads' : '') + '</div>' +
+                '</div>' +
+                '<div class="file-actions">' +
+                    '<button class="file-btn" onclick="openViewer(' + f.id + ',\'' + f.original_name.replace(/'/g,"\\'") + '\')">Ansehen</button>' +
+                    '<a href="' + API.getFileDownloadUrl(f.id) + '" class="file-btn primary" download>Download</a>' +
+                    (MZDEV.isAdmin ? '<button class="file-btn admin-only" style="display:inline-flex;color:var(--red);" onclick="deleteFile(' + f.id + ')">&#10005;</button>' : '') +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+    // ── File Viewer ──
+    async function openViewer(fileId, name) {
+        document.getElementById('viewerModal').classList.add('show');
+        document.getElementById('viewerTitle').textContent = name;
+        document.getElementById('viewerBody').innerHTML = '<p style="text-align:center;padding:2rem;">Laden...</p>';
+        document.getElementById('viewerDownload').href = API.getFileDownloadUrl(fileId);
+        try {
+            const data = await API.viewFile(fileId);
+            const body = document.getElementById('viewerBody');
+            if (data.type === 'text') {
+                body.innerHTML = '<pre><code>' + escapeHtml(data.content) + '</code></pre>';
+            } else if (data.type === 'pdf') {
+                body.innerHTML = '<iframe src="' + data.url + '" style="min-height:70vh;"></iframe>';
+            } else if (data.type === 'image') {
+                body.innerHTML = '<img src="' + data.url + '" alt="' + data.name + '">';
+            } else if (data.type === 'office') {
+                body.innerHTML = '<iframe src="' + data.viewer_url + '" style="min-height:70vh;"></iframe>';
+            } else if (data.type === 'video') {
+                body.innerHTML = '<video controls><source src="' + data.url + '"></video>';
+            } else if (data.type === 'audio') {
+                body.innerHTML = '<audio controls style="width:100%;"><source src="' + data.url + '"></audio>';
+            } else {
+                body.innerHTML = '<div class="empty-state"><div class="icon">&#128196;</div><p>Vorschau nicht verfuegbar</p><a href="' + API.getFileDownloadUrl(fileId) + '" class="file-btn primary" download>Datei herunterladen</a></div>';
+            }
+        } catch (e) {
+            document.getElementById('viewerBody').innerHTML = '<p style="color:var(--red);">Fehler: ' + e.message + '</p>';
+        }
+    }
+    function closeViewer() { document.getElementById('viewerModal').classList.remove('show'); }
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    // ── Upload ──
+    function openUploadModal() { document.getElementById('uploadModal').classList.add('show'); }
+    function closeUploadModal() {
+        document.getElementById('uploadModal').classList.remove('show');
+        document.getElementById('fileInput').value = '';
+        document.getElementById('selectedFile').style.display = 'none';
+        document.getElementById('fileDescription').value = '';
+        document.getElementById('uploadBtn').disabled = true;
+    }
+    // Drag & Drop
+    const uploadZone = document.getElementById('uploadZone');
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', e => {
+        e.preventDefault(); uploadZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            document.getElementById('fileInput').files = e.dataTransfer.files;
+            showSelectedFile(e.dataTransfer.files[0]);
+        }
+    });
+    document.getElementById('fileInput').addEventListener('change', function() {
+        if (this.files.length) showSelectedFile(this.files[0]);
+    });
+    function showSelectedFile(file) {
+        document.getElementById('selectedFile').style.display = 'block';
+        document.getElementById('selectedFileName').textContent = file.name + ' (' + MZDEV.formatFileSize(file.size) + ')';
+        document.getElementById('uploadBtn').disabled = false;
+    }
+    async function uploadFile() {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) return;
+        const desc = document.getElementById('fileDescription').value;
+        document.getElementById('uploadBtn').disabled = true;
+        document.getElementById('uploadBtn').textContent = 'Hochladen...';
+        try {
+            await API.uploadFile(projectId, file, desc);
+            MZDEV.showToast('Datei hochgeladen!', 'success');
+            closeUploadModal();
+            loadProject();
+        } catch (e) {
+            MZDEV.showToast('Fehler: ' + e.message, 'error');
+        }
+        document.getElementById('uploadBtn').disabled = false;
+        document.getElementById('uploadBtn').textContent = 'Hochladen';
+    }
+    // ── Edit project modal ──
+    function openEditProjectModal() {
+        if (!projectData) return;
+        document.getElementById('editName').value = projectData.name;
+        document.getElementById('editDesc').value = projectData.description || '';
+        document.getElementById('editCategory').value = projectData.category || '';
+        document.getElementById('editStatus').value = projectData.status || 'active';
+        document.getElementById('editTech').value = (projectData.technologies || []).join(', ');
+        document.getElementById('editGithub').value = projectData.github_url || '';
+        document.getElementById('editLive').value = projectData.live_url || '';
+        document.getElementById('editProjectModal').classList.add('show');
+    }
+    function closeEditProjectModal() { document.getElementById('editProjectModal').classList.remove('show'); }
+    async function saveProjectEdit() {
+        try {
+            const tech = document.getElementById('editTech').value.split(',').map(s => s.trim()).filter(Boolean);
+            await API.updateProject(projectId, {
+                name: document.getElementById('editName').value,
+                description: document.getElementById('editDesc').value,
+                category: document.getElementById('editCategory').value,
+                status: document.getElementById('editStatus').value,
+                technologies: tech,
+                github_url: document.getElementById('editGithub').value,
+                live_url: document.getElementById('editLive').value,
+            });
+            MZDEV.showToast('Projekt aktualisiert!', 'success');
+            closeEditProjectModal();
+            loadProject();
+        } catch (e) {
+            MZDEV.showToast('Fehler: ' + e.message, 'error');
+        }
+    }
+    // ── Save README ──
+    async function saveReadme() {
+        try {
+            await API.updateProject(projectId, { readme: document.getElementById('readmeContent').innerHTML });
+            MZDEV.showToast('README gespeichert!', 'success');
+        } catch (e) {
+            MZDEV.showToast('Fehler: ' + e.message, 'error');
+        }
+    }
+    // ── Delete project ──
+    async function deleteProject() {
+        if (!confirm('Projekt wirklich loeschen?')) return;
+        try {
+            await API.deleteProject(projectId);
+            MZDEV.showToast('Projekt geloescht', 'success');
+            window.location.href = 'projects.html';
+        } catch (e) {
+            MZDEV.showToast('Fehler: ' + e.message, 'error');
+        }
+    }
+    // ── Delete file ──
+    async function deleteFile(id) {
+        if (!confirm('Datei wirklich loeschen?')) return;
+        try {
+            await API.deleteFile(id);
+            MZDEV.showToast('Datei geloescht', 'success');
+            loadProject();
+        } catch (e) {
+            MZDEV.showToast('Fehler: ' + e.message, 'error');
+        }
+    }
+    // ── Close modals on overlay click ──
+    document.querySelectorAll('.modal-overlay').forEach(o => {
+        o.addEventListener('click', e => { if (e.target === o) o.classList.remove('show'); });
+    });
+    // ── UI update after auth ──
+    function updateUI() {
+        if (MZDEV.isAdmin) MZDEV.activateAdminMode();
+        loadProject();
+        loadNotifCount();
+    }
+    async function loadNotifCount() {
+        try {
+            const data = await API.getNotifCount();
+            if (data && data.unread !== undefined) MZDEV.updateNotificationBadge(data.unread);
+        } catch(e) {}
+    }
+    // Load on ready (api.js calls updateUI after auth check)
+    if (!params.get('auth_token')) loadProject();
+    </script>
+</body>
+</html>
